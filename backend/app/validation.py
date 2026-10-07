@@ -1,0 +1,95 @@
+"""Input rules from specs/backend-spec.md, with the error codes and messages
+from specs/api-contract-spec.md."""
+
+import re
+from datetime import date
+
+from app import clock
+
+CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment", "Other")
+NOTE_MAX_LENGTH = 100
+
+_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+class ApiError(Exception):
+    def __init__(self, status_code: int, code: str, message: str, field: str | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+        self.field = field
+
+    def to_body(self) -> dict:
+        return {"error": {"code": self.code, "message": self.message, "field": self.field}}
+
+
+def invalid_request() -> ApiError:
+    return ApiError(422, "invalid_request", "The request could not be read. Please try again.")
+
+
+def validate_paise(value, field: str, code: str, message: str) -> int:
+    # type() rather than isinstance(): True/False count as ints in Python.
+    if type(value) is not int or value <= 0:
+        raise ApiError(422, code, message, field)
+    return value
+
+
+def validate_category(value) -> str:
+    if value not in CATEGORIES:
+        raise ApiError(
+            422,
+            "invalid_category",
+            "Category must be one of: Food, Transport, Shopping, Bills, Entertainment, Other.",
+            "category",
+        )
+    return value
+
+
+def validate_date(value) -> str:
+    if not isinstance(value, str) or not _DATE_PATTERN.fullmatch(value):
+        raise _invalid_date()
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise _invalid_date()
+    if parsed > clock.today_in_ist():
+        raise ApiError(422, "future_date", "Date cannot be in the future.", "date")
+    return value
+
+
+def _invalid_date() -> ApiError:
+    return ApiError(
+        422,
+        "invalid_date",
+        "Date is required and must be a real date in YYYY-MM-DD form.",
+        "date",
+    )
+
+
+def validate_note(value) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise invalid_request()
+    note = value.strip()
+    if len(note) > NOTE_MAX_LENGTH:
+        raise ApiError(422, "note_too_long", "Note must be 100 characters or fewer.", "note")
+    return note
+
+
+def validate_expense(body) -> dict:
+    """Checks fields in the contract's order and raises the first error found."""
+    if not isinstance(body, dict):
+        raise invalid_request()
+    return {
+        "amount_paise": validate_paise(
+            body.get("amount_paise"),
+            "amount_paise",
+            "invalid_amount",
+            "Amount is required and must be a whole number of paise greater than 0.",
+        ),
+        "category": validate_category(body.get("category")),
+        "date": validate_date(body.get("date")),
+        "note": validate_note(body.get("note")),
+    }
