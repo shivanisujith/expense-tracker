@@ -9,6 +9,7 @@
   --danger: #cf222e;
   --danger-background: #ffebe9;
   --danger-border: #ff8182;
+  --highlight: #ddf4ff;
 }
 
 * {
@@ -175,4 +176,139 @@ button:disabled {
 
 .expense-note {
   overflow-wrap: anywhere;
+}
+
+/* Secondary and danger buttons */
+button.secondary {
+  background: var(--card);
+  color: var(--accent);
+}
+
+button.secondary.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.danger-solid {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--accent-text);
+}
+
+.item-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Expense list: edit / delete */
+.expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.expense-item.editing {
+  background: var(--highlight);
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.confirm-delete {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 6px;
+  background: var(--danger-background);
+}
+
+.confirm-delete p {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+/* Summary */
+.summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.summary-row {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.summary-row:last-child {
+  margin-bottom: 0;
+}
+
+.summary-row.over-limit {
+  border-color: var(--danger-border);
+  background: var(--danger-background);
+}
+
+.summary-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-category {
+  font-weight: 600;
+}
+
+.summary-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 6px 0 0;
+}
+
+.summary-numbers dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.summary-numbers dd {
+  margin: 0;
+}
+
+.over-limit-warning {
+  color: var(--danger);
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.limit-editor {
+  margin-top: 10px;
+}
+
+.limit-editor label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.limit-editor-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.limit-editor-controls input {
+  font: inherit;
+  width: 160px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.limit-editor-controls input[aria-invalid='true'] {
+  border-color: var(--danger);
 }

@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { addExpense } from '../api.js'
+import { addExpense, editExpense } from '../api.js'
 import { CATEGORIES, NOTE_MAX_LENGTH } from '../categories.js'
 import { todayText } from '../dates.js'
-import { parseRupees } from '../money.js'
+import { paiseToRupeesText, parseRupees } from '../money.js'
 
 // Backend field names -> form field names, for showing 422 errors.
 const FORM_FIELD = { amount_paise: 'amount', category: 'category', date: 'date', note: 'note' }
 
 function emptyForm() {
   return { amount: '', category: 'Food', date: todayText(), note: '' }
+}
+
+function formFromExpense(expense) {
+  return {
+    amount: paiseToRupeesText(expense.amount_paise),
+    category: expense.category,
+    date: expense.date,
+    note: expense.note,
+  }
 }
 
 /** Frontend checks from specs/frontend-spec.md. The backend checks again. */
@@ -24,10 +33,14 @@ function checkForm(values) {
   return { errors, amountPaise: amount.paise }
 }
 
-function ExpenseForm({ onSaved, onUnreachable }) {
-  const [values, setValues] = useState(emptyForm)
+/**
+ * Adds a new expense, or edits `editing` when it is set. The parent gives
+ * this a new `key` when switching modes, so the form starts fresh each time.
+ */
+function ExpenseForm({ editing, initialError, onSaved, onNotFound, onCancel, onUnreachable }) {
+  const [values, setValues] = useState(() => (editing ? formFromExpense(editing) : emptyForm()))
   const [fieldErrors, setFieldErrors] = useState({})
-  const [formError, setFormError] = useState('')
+  const [formError, setFormError] = useState(initialError)
   const [saving, setSaving] = useState(false)
 
   function update(field) {
@@ -41,19 +54,26 @@ function ExpenseForm({ onSaved, onUnreachable }) {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
+    const expense = {
+      amount_paise: amountPaise,
+      category: values.category,
+      date: values.date,
+      note: values.note,
+    }
     setSaving(true)
     try {
-      await addExpense({
-        amount_paise: amountPaise,
-        category: values.category,
-        date: values.date,
-        note: values.note,
-      })
-      setValues(emptyForm())
+      if (editing) {
+        await editExpense(editing.id, expense)
+      } else {
+        await addExpense(expense)
+        setValues(emptyForm())
+      }
       onSaved()
     } catch (error) {
       if (error.kind === 'unreachable') {
         onUnreachable()
+      } else if (error.kind === 'not_found' && editing) {
+        onNotFound(error.message)
       } else if (error.kind === 'invalid' && FORM_FIELD[error.field]) {
         setFieldErrors({ [FORM_FIELD[error.field]]: error.message })
       } else {
@@ -65,8 +85,8 @@ function ExpenseForm({ onSaved, onUnreachable }) {
   }
 
   return (
-    <section className="card">
-      <h2>Add expense</h2>
+    <section className="card" id="expense-form">
+      <h2>{editing ? 'Edit expense' : 'Add expense'}</h2>
       {formError && (
         <p className="form-error" role="alert">
           {formError}
@@ -117,8 +137,13 @@ function ExpenseForm({ onSaved, onUnreachable }) {
 
         <div className="form-buttons">
           <button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : 'Add expense'}
+            {saving ? 'Saving...' : editing ? 'Save changes' : 'Add expense'}
           </button>
+          {editing && (
+            <button type="button" className="secondary" onClick={onCancel} disabled={saving}>
+              Cancel
+            </button>
+          )}
         </div>
       </form>
     </section>

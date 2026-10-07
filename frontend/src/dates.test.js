@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { formatDate, todayText } from './dates.js'
+import { formatDate, formatMonth, todayText } from './dates.js'
 
 test.each([
   ['2026-10-07', '7 Oct 2026'],
@@ -11,4 +11,11 @@ test.each([
 
 test('today is written as YYYY-MM-DD with leading zeros', () => {
   expect(todayText(new Date(2026, 0, 5))).toBe('2026-01-05')
+})
+
+test.each([
+  ['2026-10', 'October 2026'],
+  ['2027-01', 'January 2027'],
+])('month "%s" is shown as "%s"', (text, shown) => {
+  expect(formatMonth(text)).toBe(shown)
 })

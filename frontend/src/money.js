@@ -34,6 +34,11 @@ export function parseRupees(text) {
   return { paise }
 }
 
+/** Paise as plain rupee text for an input box, e.g. 1250 -> "12.50". */
+export function paiseToRupeesText(paise) {
+  return `${Math.floor(paise / 100)}.${String(paise % 100).padStart(2, '0')}`
+}
+
 const rupeeGrouping = new Intl.NumberFormat('en-IN')
 
 /** Formats paise for display, e.g. 12500050 -> "Rs 1,25,000.50". */

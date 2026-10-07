@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { formatRupees, parseRupees } from './money.js'
+import { formatRupees, paiseToRupeesText, parseRupees } from './money.js'
 
 describe('parseRupees', () => {
   test.each([
@@ -52,5 +52,20 @@ describe('formatRupees', () => {
     [-5000, '-Rs 50.00'],
   ])('%i paise is shown as "%s"', (paise, text) => {
     expect(formatRupees(paise)).toBe(text)
+  })
+})
+
+describe('paiseToRupeesText', () => {
+  test.each([
+    [1250, '12.50'],
+    [1, '0.01'],
+    [100, '1.00'],
+    [12500050, '125000.50'],
+  ])('%i paise is written as "%s"', (paise, text) => {
+    expect(paiseToRupeesText(paise)).toBe(text)
+  })
+
+  test.each([1, 1250, 99999, 12500050])('%i paise survives a round trip', (paise) => {
+    expect(parseRupees(paiseToRupeesText(paise))).toEqual({ paise })
   })
 })

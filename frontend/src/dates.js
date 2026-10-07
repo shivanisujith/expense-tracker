@@ -12,3 +12,14 @@ export function formatDate(text) {
   const [year, month, day] = text.split('-')
   return `${Number(day)} ${MONTHS[Number(month) - 1]} ${year}`
 }
+
+const FULL_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+/** "2026-10" -> "October 2026". */
+export function formatMonth(text) {
+  const [year, month] = text.split('-')
+  return `${FULL_MONTHS[Number(month) - 1]} ${year}`
+}
