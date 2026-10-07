@@ -291,3 +291,135 @@ def test_unexpected_failure_returns_server_error(client, monkeypatch):
 def test_frontend_origin_is_allowed(client):
     response = client.get("/api/expenses", headers={"Origin": "http://localhost:5173"})
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+# --- Editing (criterion 5) --------------------------------------------------
+
+def food_spent(client):
+    categories = client.get("/api/summary").json()["categories"]
+    return next(row["spent_paise"] for row in categories if row["category"] == "Food")
+
+
+def test_edit_replaces_all_fields_and_updates_list_and_summary(client):
+    created = client.post("/api/expenses", json=make_expense(amount_paise=1000)).json()
+
+    new_values = {"amount_paise": 2500, "category": "Bills", "date": "2026-10-05", "note": "Phone"}
+    response = client.put(f"/api/expenses/{created['id']}", json=new_values)
+
+    assert response.status_code == 200
+    assert response.json() == {"id": created["id"], **new_values}
+    assert client.get("/api/expenses").json() == [{"id": created["id"], **new_values}]
+    assert food_spent(client) == 0
+
+
+def test_edit_amount_changes_category_total(client):
+    created = client.post("/api/expenses", json=make_expense(amount_paise=1000)).json()
+
+    client.put(f"/api/expenses/{created['id']}", json=make_expense(amount_paise=4000))
+
+    assert food_spent(client) == 4000
+
+
+def test_edit_without_note_clears_the_note(client):
+    created = client.post("/api/expenses", json=make_expense(note="Lunch")).json()
+    body = make_expense()
+    del body["note"]
+
+    response = client.put(f"/api/expenses/{created['id']}", json=body)
+
+    assert response.json()["note"] == ""
+
+
+@pytest.mark.parametrize(
+    "changes, expected_code",
+    [
+        ({"amount_paise": -1}, "invalid_amount"),
+        ({"category": "Travel"}, "invalid_category"),
+        ({"date": "2026-10-08"}, "future_date"),
+        ({"note": "x" * 101}, "note_too_long"),
+    ],
+)
+def test_edit_with_bad_values_is_refused_and_nothing_changes(client, changes, expected_code):
+    created = client.post("/api/expenses", json=make_expense()).json()
+
+    response = client.put(f"/api/expenses/{created['id']}", json=make_expense(**changes))
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == expected_code
+    assert client.get("/api/expenses").json() == [created]
+
+
+def test_edit_unknown_expense_is_not_found(client):
+    response = client.put("/api/expenses/999", json=make_expense())
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "code": "expense_not_found",
+            "message": "This expense no longer exists.",
+            "field": None,
+        }
+    }
+
+
+def test_edit_unknown_expense_with_bad_values_reports_not_found(client):
+    response = client.put("/api/expenses/999", json=make_expense(amount_paise=0))
+    assert_error(response, 404, "expense_not_found", None)
+
+
+def test_edit_with_unreadable_body_is_refused(client):
+    created = client.post("/api/expenses", json=make_expense()).json()
+
+    response = client.put(
+        f"/api/expenses/{created['id']}",
+        content="{bad",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert_error(response, 422, "invalid_request", None)
+
+
+def test_edited_expense_keeps_its_place_among_same_date_expenses(client):
+    first = client.post("/api/expenses", json=make_expense()).json()
+    second = client.post("/api/expenses", json=make_expense()).json()
+
+    edited = client.put(f"/api/expenses/{first['id']}", json=make_expense(note="Edited")).json()
+
+    assert client.get("/api/expenses").json() == [second, edited]
+
+
+# --- Deleting (criterion 5) -------------------------------------------------
+
+def test_delete_removes_expense_from_list_and_summary(client):
+    keep = client.post("/api/expenses", json=make_expense(amount_paise=1000)).json()
+    remove = client.post("/api/expenses", json=make_expense(amount_paise=3000)).json()
+
+    response = client.delete(f"/api/expenses/{remove['id']}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert client.get("/api/expenses").json() == [keep]
+    assert food_spent(client) == 1000
+
+
+def test_delete_unknown_expense_is_not_found(client):
+    response = client.delete("/api/expenses/999")
+    assert_error(response, 404, "expense_not_found", None)
+
+
+def test_delete_twice_is_not_found_the_second_time(client):
+    created = client.post("/api/expenses", json=make_expense()).json()
+
+    client.delete(f"/api/expenses/{created['id']}")
+    response = client.delete(f"/api/expenses/{created['id']}")
+
+    assert_error(response, 404, "expense_not_found", None)
+
+
+def test_deleted_id_is_never_reused(client):
+    created = client.post("/api/expenses", json=make_expense()).json()
+    client.delete(f"/api/expenses/{created['id']}")
+
+    new = client.post("/api/expenses", json=make_expense()).json()
+
+    assert new["id"] != created["id"]

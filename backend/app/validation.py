@@ -78,6 +78,17 @@ def validate_note(value) -> str:
     return note
 
 
+def validate_limit(body) -> int:
+    if not isinstance(body, dict):
+        raise invalid_request()
+    return validate_paise(
+        body.get("limit_paise"),
+        "limit_paise",
+        "invalid_limit",
+        "Limit is required and must be a whole number of paise greater than 0.",
+    )
+
+
 def validate_expense(body) -> dict:
     """Checks fields in the contract's order and raises the first error found."""
     if not isinstance(body, dict):
