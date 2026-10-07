@@ -1,0 +1,17 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Database files
+*.db
+
+# Frontend (frontend/.gitignore also covers these)
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
