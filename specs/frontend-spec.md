@@ -20,15 +20,19 @@ frontend checks below are only for convenience.
   instead of a word.
 
 ## Screen layout
-The app is **one page** laid out as a dashboard, with these parts, top to
-bottom:
+The app is **one page** laid out as a dashboard, with these parts:
 
-1. **Header bar**: the app name "Expense Tracker" and the current month,
-   for example "October 2026".
+1. **Header bar**: the app name "Expense Tracker" and today's full date,
+   for example "Thursday, 8 October 2026".
 2. **Server banner**: hidden unless the server can't be reached.
-3. **Category cards**: one card per category, in a grid.
-4. **Add expense form**: one horizontal row.
-5. **Expense list**: all expenses, newest first.
+3. **Add expense form**: one horizontal row across the full width.
+4. Below the form, **two columns** side by side:
+   - **Left (a bit more than half the width): category cards**, under a
+     small label such as "This month: October 2026".
+   - **Right: expense list**, all expenses, newest first.
+
+On a phone, these all stack into one column in the order above: header
+bar, banner, add form, category cards, expense list.
 
 Editing an expense happens in a **popup**, not in the add form (see
 section 3).
@@ -56,20 +60,42 @@ section 3).
   example with no internet), the browser's normal system font is used and
   the page still works.
 - **Less scrolling:** the page should look like a website dashboard, not
-  a long document. On a laptop, the header, category cards, and add form
-  should fit on the first screen.
+  a long document. On a laptop, the header, add form, and the top of both
+  columns (category cards and expense list) should fit on the first
+  screen.
+- **Use the screen width:** the page content is up to about 1400 pixels
+  wide, with small margins (about 24 pixels) on each side, instead of a
+  narrow centred column.
+
+### Page columns
+- On a laptop or wider screen (about 1000 pixels wide or more), the area
+  below the add form is split into two columns:
+  - **Left:** the "This month" label and the category cards, taking a
+    bit more than half the width (about 55%).
+  - **Right:** the expense list, taking the rest.
+- On narrower screens (tablets and phones), the two columns stack into
+  one: the category cards first, then the expense list.
 
 ### Header bar
 - A full-width bar across the top with "Expense Tracker" on the left and
-  the current month on the right.
+  today's full date on the right, for example "Thursday, 8 October 2026"
+  (weekday, day, month name, year).
+- The date comes from the browser's own clock, so it shows even before
+  the backend answers or when the server can't be reached.
+
+### "This month" label
+- A small label just above the category cards: "This month: " followed
+  by the month name and year, for example "This month: October 2026".
 - The month comes from the summary's `month` value (worked out by the
-  backend in IST). Until the summary has loaded, only the app name shows.
+  backend in IST), so it always matches what the cards count. The label
+  appears once the summary has loaded, and is hidden while loading or if
+  the summary can't be loaded.
 
 ### Category cards
 - Six cards in the fixed order: Food, Transport, Shopping, Bills,
   Entertainment, Other.
-- **Grid:** 3 cards per row on a laptop, 2 per row on a tablet-sized
-  screen, 1 per row on a phone.
+- **Grid:** 2 cards per row in the left column on a laptop, 2 per row on
+  a tablet-sized screen, 1 per row on a phone.
 - Each card shows:
   - The **category name**.
   - **Spent of limit**, for example `Rs 3,200.00 of Rs 5,000.00`. With no
@@ -89,8 +115,12 @@ section 3).
   not just colour.
 
 ### Add expense form
+- The form runs across the **full width** of the page, above the two
+  columns.
 - On a laptop, all fields sit in **one horizontal row**, in this order:
   Amount, Category, Date, Note, then the **Add expense** button.
+- The Category box starts empty, showing "Choose a category" in grey
+  placeholder text.
 - Each field keeps a visible label above it.
 - Error messages appear **just below the row**, each one naming its field
   (for example "Amount: Please enter an amount.").
@@ -104,6 +134,9 @@ section 3).
 - The icon buttons have text labels for screen readers ("Edit expense",
   "Delete expense") and show the same words as a tooltip on hover.
 - Rows are separated by thin lines. No other decoration.
+- When the list's column is too narrow to fit everything on one line,
+  each row may wrap onto two lines (for example category and amount on
+  top, date and note below), keeping the amount and icon buttons visible.
 - The delete confirmation appears inside that expense's row (see
   section 4).
 
@@ -111,22 +144,26 @@ section 3).
 - A white card in the middle of the screen, over a darkened page.
 - Title "Edit expense", the four fields (Amount, Category, Date, Note)
   stacked one per line, then **Save changes** and **Cancel**.
+- The Category box shows the expense's current category. It has no
+  "Choose a category" option.
 - While the popup is open, the page behind it can't be used.
 - When it opens, the cursor goes to the Amount field.
 
 ### Narrow phone screens
-- Everything stacks into **one column**: one category card per row, the
-  add form fields stacked one per line with a full-width button, and each
-  expense row wrapping so the amount and icon buttons stay visible.
+- Everything stacks into **one column**, in this order: header bar,
+  banner, add form (fields stacked one per line with a full-width
+  button), "This month" label and category cards (one card per row), and
+  the expense list (each row wrapping so the amount and icon buttons stay
+  visible).
 - Nothing on the page needs sideways scrolling.
 
 ---
 
 ## 1. Category cards (this month's summary)
 
-The content of each card is described under **Visual design** above.
-The month shown is the current month (IST), and spent counts only that
-month's expenses.
+The content of each card and the "This month" label above them are
+described under **Visual design** above. The month in the label is the
+current month (IST), and spent counts only that month's expenses.
 
 ### Setting a limit
 - Clicking **Set limit** / **Change limit** shows a small amount box and
@@ -159,7 +196,7 @@ The form is always in add mode. It is never used for editing.
 | Field    | Input                         | Default    |
 |----------|-------------------------------|------------|
 | Amount   | Text box for rupees, e.g. 12.50 | empty    |
-| Category | Drop-down of the six categories | Food     |
+| Category | Drop-down of the six categories | none: shows "Choose a category" |
 | Date     | Date picker, cannot pick a day after today | today |
 | Note     | Text box, max 100 characters  | empty      |
 
@@ -173,6 +210,9 @@ same checks and messages are used in the edit popup.
 - Amount 0 or less: "Amount must be greater than 0."
 - Amount with more than 2 decimal places: "Amount can have at most 2
   decimal places."
+- Category not chosen: "Please choose a category." (Below the row this
+  reads "Category: Please choose a category.") Only the add form can
+  have no category; the edit popup always has one.
 - Date empty: "Please choose a date."
 - Date after today: "Date cannot be in the future."
 - Note over 100 characters: "Note must be 100 characters or fewer."
@@ -183,8 +223,9 @@ When the checks pass, the amount is converted from rupees to whole paise
 ### States
 - **Saving:** the button shows "Saving..." and is disabled, so the
   expense can't be sent twice.
-- **Success:** the form clears back to its defaults (date = today). The
-  list and cards reload.
+- **Success:** the form clears back to its defaults (amount and note
+  empty, category back to "Choose a category", date = today). The list
+  and cards reload.
 - **Refused by backend (422):** show the backend's `message` below the
   row, labelled with the field named in `field`, or on its own if `field`
   is null. Keep everything the user typed.
@@ -284,7 +325,8 @@ the banner shows instead of a blank page. Start the backend, click
 ## User flow
 1. **Open the page.** The cards and list show their loading states, then
    their data (or the empty/error/server states above).
-2. **Add an expense.** Fill the form row, click **Add expense**. The list
+2. **Add an expense.** Fill the form row (including choosing a
+   category), click **Add expense**. The list
    and cards update. If the category is now over its limit, its card turns
    red with the over-limit warning. The expense is still saved.
 3. **Edit an expense.** Click the **edit** icon on a list row. The popup
