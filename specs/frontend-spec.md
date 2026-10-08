@@ -27,9 +27,9 @@ The app is **one page** laid out as a dashboard, with these parts:
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Add expense form**: one horizontal row across the full width.
 4. Below the form, **two columns** side by side:
-   - **Left (a bit more than half the width): category cards**, under a
-     small label such as "This month: October 2026".
-   - **Right: expense list**, all expenses, newest first.
+   - **Left (a bit more than half the width): one white box** headed
+     "This month: October 2026", holding all six category cards.
+   - **Right: the Expenses box**, all expenses, newest first.
 
 On a phone, these all stack into one column in the order above: header
 bar, banner, add form, category cards, expense list.
@@ -48,14 +48,45 @@ section 3).
 ## Visual design
 
 ### Overall style
-- **Page background:** light grey.
-- **Cards:** white, with rounded corners and a thin border or soft shadow.
-  Category cards, the add form, and the expense list each sit on a card.
-- **Accent colour:** one calm blue, used for buttons, progress bars, and
-  links. No other accent colours.
+- **Page background:** soft baby pink.
+- **Boxes and cards:** white, with rounded corners and a thin border, so
+  they stand out clearly from the pink page. The header bar, the add
+  form, the category box, the Expenses box, and the edit popup are white
+  boxes. Each category card is a smaller white card, with a thin border,
+  inside the category box.
+- **Accent colour:** sage green, used for buttons, links, and progress
+  bars. No other accent colours. Buttons use a deep sage so white text
+  on them is easy to read.
 - **Red:** used **only** for over-limit warnings and error messages
   (including the server banner and the delete confirmation). Nothing else
   is red.
+- **Grey text** (such as dates and notes) is only placed on white, never
+  directly on the pink page, where it would be too faint.
+
+### Colours and contrast
+- **Readability rule:** every colour pair must meet the WCAG AA contrast
+  standard (a widely used accessibility guideline):
+  - At least **4.5 : 1** for text, including text on buttons.
+  - At least **3 : 1** for progress bars and borders that carry meaning
+    (such as the over-limit border).
+- **Palette:** these colours meet that rule (contrast measured against the
+  colour each is used on):
+
+| Use | Colour | Contrast |
+|---|---|---|
+| Page background (baby pink) | `#FBE4EC` | main text on it: 12.2 : 1 |
+| Boxes and cards | `#FFFFFF` | main text on it: 14.7 : 1 |
+| Main text | `#1F2937` | see above |
+| Grey text (dates, notes, hints) | `#5B6370` | on white: 6.1 : 1 |
+| Sage: buttons, links, progress bar | `#4F6F52` | white text on it: 5.6 : 1; on white: 5.6 : 1 |
+| Sage, darker (button hover) | `#3F5A42` | white text on it: 7.6 : 1 |
+| Light sage (progress bar track, hover backgrounds) | `#E3EAE0` / `#EEF3EC` | sage bar on track: 4.6 : 1 |
+| Red: warning and error text, over-limit bar | `#B91C1C` | on light red: 5.9 : 1; on white: 6.5 : 1; on pink: 5.4 : 1 |
+| Red border (over-limit card) | `#DC2626` | against white: 4.8 : 1 |
+| Light red (over-limit card, banner, delete confirmation) | `#FEF2F2` | main text on it: 13.4 : 1 |
+
+- Small changes to these exact colours are fine during the build, as long
+  as every pair still meets the readability rule.
 - **Font:** Inter, loaded from Google Fonts. If it can't load (for
   example with no internet), the browser's normal system font is used and
   the page still works.
@@ -70,11 +101,14 @@ section 3).
 ### Page columns
 - On a laptop or wider screen (about 1000 pixels wide or more), the area
   below the add form is split into two columns:
-  - **Left:** the "This month" label and the category cards, taking a
-    bit more than half the width (about 55%).
-  - **Right:** the expense list, taking the rest.
+  - **Left:** the category box (the "This month" heading and all six
+    category cards), taking a bit more than half the width (about 55%).
+  - **Right:** the Expenses box, taking the rest.
+- The two boxes look even: their tops line up, and they use the same
+  padding and the same heading style. Each box is as tall as its own
+  content, so a long expense list does not stretch the category box.
 - On narrower screens (tablets and phones), the two columns stack into
-  one: the category cards first, then the expense list.
+  one: the category box first, then the Expenses box.
 
 ### Header bar
 - A full-width bar across the top with "Expense Tracker" on the left and
@@ -83,13 +117,17 @@ section 3).
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
 
-### "This month" label
-- A small label just above the category cards: "This month: " followed
-  by the month name and year, for example "This month: October 2026".
+### Category box and its "This month" heading
+- One white box holds the heading and all six category cards. The
+  loading, error, and Try again messages for the summary also appear
+  inside this box.
+- The box's heading is "This month: " followed by the month name and
+  year, for example "This month: October 2026", styled like the
+  "Expenses" heading in the box next to it.
 - The month comes from the summary's `month` value (worked out by the
-  backend in IST), so it always matches what the cards count. The label
-  appears once the summary has loaded, and is hidden while loading or if
-  the summary can't be loaded.
+  backend in IST), so it always matches what the cards count. Until the
+  summary has loaded, or if it can't be loaded, the heading reads just
+  "This month".
 
 ### Category cards
 - Six cards in the fixed order: Food, Transport, Shopping, Bills,
@@ -101,18 +139,19 @@ section 3).
   - **Spent of limit**, for example `Rs 3,200.00 of Rs 5,000.00`. With no
     limit set, just the spent amount, for example `Rs 3,200.00 spent`.
   - A **progress bar** showing spent as a share of the limit. It is
-    filled in blue, never more than full, and is only shown when a limit
-    is set.
+    filled in sage green on a light sage track, never more than full, and
+    is only shown when a limit is set.
   - One status line:
     - `Rs X left` when a limit is set and not exceeded (including
       `Rs 0.00 left` when spent exactly equals the limit).
     - `No limit set` when there is no limit.
     - `Over limit by Rs X` when over the limit.
   - The **Set limit** (no limit yet) or **Change limit** button.
-- **Over-limit card:** the card turns red: red border and light red
-  background, a full red progress bar, and the status line
-  `Over limit by Rs X` in red bold text. The warning is always in words,
-  not just colour.
+- **Over-limit card:** the card turns red: a thicker red border (2
+  pixels instead of 1) and light red background, a full red progress bar,
+  and the status line `Over limit by Rs X` in red bold text. It sits on
+  the white category box, not the pink page, so the red stands out
+  clearly. The warning is always in words, not just colour.
 
 ### Add expense form
 - The form runs across the **full width** of the page, above the two
@@ -152,18 +191,17 @@ section 3).
 ### Narrow phone screens
 - Everything stacks into **one column**, in this order: header bar,
   banner, add form (fields stacked one per line with a full-width
-  button), "This month" label and category cards (one card per row), and
-  the expense list (each row wrapping so the amount and icon buttons stay
-  visible).
+  button), the category box (one card per row), and the Expenses box
+  (each row wrapping so the amount and icon buttons stay visible).
 - Nothing on the page needs sideways scrolling.
 
 ---
 
 ## 1. Category cards (this month's summary)
 
-The content of each card and the "This month" label above them are
-described under **Visual design** above. The month in the label is the
-current month (IST), and spent counts only that month's expenses.
+The category box, its "This month" heading, and the content of each card
+are described under **Visual design** above. The month in the heading is
+the current month (IST), and spent counts only that month's expenses.
 
 ### Setting a limit
 - Clicking **Set limit** / **Change limit** shows a small amount box and
@@ -178,7 +216,8 @@ current month (IST), and spent counts only that month's expenses.
 - **Can't reach server:** show the server banner, keep the box open.
 
 ### States
-- **Loading:** "Loading summary..." in place of the cards.
+- **Loading:** "Loading summary..." inside the category box, in place of
+  the cards.
 - **Empty:** none. All six cards always show, with Rs 0.00 spent if
   nothing was spent.
 - **Error (500):** "Couldn't load the summary. Please try again." with a
