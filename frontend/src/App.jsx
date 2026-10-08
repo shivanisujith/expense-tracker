@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 import { getSummary, listExpenses } from './api.js'
+import CategoryCards from './components/CategoryCards.jsx'
 import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
-import SummaryTable from './components/SummaryTable.jsx'
+import { formatMonth } from './dates.js'
 
 function statusFor(result) {
   if (result.status === 'fulfilled') return 'loaded'
@@ -78,35 +79,42 @@ function App() {
   }
 
   return (
-    <main className="app">
-      <h1>Expense Tracker</h1>
-      {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
-      <ExpenseForm
-        key={editing ? `edit-${editing.id}` : 'add'}
-        editing={editing}
-        initialError={formNotice}
-        onSaved={handleFormSaved}
-        onNotFound={handleEditNotFound}
-        onCancel={stopEditing}
-        onUnreachable={showUnreachable}
-      />
-      <SummaryTable
-        summary={summary}
-        status={summaryStatus}
-        onRetry={loadAll}
-        onLimitSaved={loadAll}
-        onUnreachable={showUnreachable}
-      />
-      <ExpenseList
-        expenses={expenses}
-        status={listStatus}
-        editingId={editing?.id ?? null}
-        onRetry={loadAll}
-        onEdit={startEditing}
-        onDeleted={handleDeleted}
-        onUnreachable={showUnreachable}
-      />
-    </main>
+    <>
+      <header className="header-bar">
+        <div className="header-inner">
+          <h1>Expense Tracker</h1>
+          {summary && <p className="header-month">{formatMonth(summary.month)}</p>}
+        </div>
+      </header>
+      <main className="app">
+        {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
+        <CategoryCards
+          summary={summary}
+          status={summaryStatus}
+          onRetry={loadAll}
+          onLimitSaved={loadAll}
+          onUnreachable={showUnreachable}
+        />
+        <ExpenseForm
+          key={editing ? `edit-${editing.id}` : 'add'}
+          editing={editing}
+          initialError={formNotice}
+          onSaved={handleFormSaved}
+          onNotFound={handleEditNotFound}
+          onCancel={stopEditing}
+          onUnreachable={showUnreachable}
+        />
+        <ExpenseList
+          expenses={expenses}
+          status={listStatus}
+          editingId={editing?.id ?? null}
+          onRetry={loadAll}
+          onEdit={startEditing}
+          onDeleted={handleDeleted}
+          onUnreachable={showUnreachable}
+        />
+      </main>
+    </>
   )
 }
 

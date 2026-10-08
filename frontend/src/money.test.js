@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { formatRupees, paiseToRupeesText, parseRupees } from './money.js'
+import {
+  LIMIT_MESSAGES,
+  formatRupees,
+  limitUsedPercent,
+  paiseToRupeesText,
+  parseRupees,
+} from './money.js'
 
 describe('parseRupees', () => {
   test.each([
@@ -67,5 +73,34 @@ describe('paiseToRupeesText', () => {
 
   test.each([1, 1250, 99999, 12500050])('%i paise survives a round trip', (paise) => {
     expect(parseRupees(paiseToRupeesText(paise))).toEqual({ paise })
+  })
+})
+
+describe('parseRupees for a limit', () => {
+  test.each([
+    ['', 'Please enter a limit.'],
+    ['abc', 'Limit must be a number, like 5000.00.'],
+    ['0', 'Limit must be greater than 0.'],
+    ['-100', 'Limit must be greater than 0.'],
+    ['12.345', 'Limit can have at most 2 decimal places.'],
+    ['999999999999999999', 'Limit is too large.'],
+  ])('"%s" gives "%s"', (text, message) => {
+    expect(parseRupees(text, LIMIT_MESSAGES)).toEqual({ error: message })
+  })
+
+  test('a valid limit becomes paise', () => {
+    expect(parseRupees('5000', LIMIT_MESSAGES)).toEqual({ paise: 500000 })
+  })
+})
+
+describe('limitUsedPercent', () => {
+  test.each([
+    [0, 10000, 0],
+    [6000, 10000, 60],
+    [10000, 10000, 100],
+    [11000, 10000, 100],
+    [1, 3, 33.33333333333333],
+  ])('%i of %i paise is %d%% full', (spent, limit, percent) => {
+    expect(limitUsedPercent(spent, limit)).toBeCloseTo(percent)
   })
 })

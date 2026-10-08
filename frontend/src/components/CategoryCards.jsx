@@ -1,17 +1,24 @@
 import { useState } from 'react'
 import { setLimit } from '../api.js'
-import { formatMonth } from '../dates.js'
-import { formatRupees, paiseToRupeesText, parseRupees } from '../money.js'
+import {
+  LIMIT_MESSAGES,
+  formatRupees,
+  limitUsedPercent,
+  paiseToRupeesText,
+  parseRupees,
+} from '../money.js'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function SummaryTable({ summary, status, onRetry, onLimitSaved, onUnreachable }) {
+function CategoryCards({ summary, status, onRetry, onLimitSaved, onUnreachable }) {
   const [editingCategory, setEditingCategory] = useState(null)
 
   return (
-    <section className="card">
-      <h2>This month{summary && `: ${formatMonth(summary.month)}`}</h2>
+    <section className="category-section" aria-labelledby="categories-heading">
+      <h2 id="categories-heading" className="visually-hidden">
+        This month's spending by category
+      </h2>
       {status === 'error' ? (
-        <div className="section-error" role="alert">
+        <div className="card section-error" role="alert">
           <p>Couldn't load the summary. Please try again.</p>
           <button type="button" onClick={onRetry}>
             Try again
@@ -20,9 +27,9 @@ function SummaryTable({ summary, status, onRetry, onLimitSaved, onUnreachable })
       ) : summary === null ? (
         status === 'loading' && <p className="muted">Loading summary...</p>
       ) : (
-        <ul className="summary-list">
+        <ul className="category-grid">
           {summary.categories.map((row) => (
-            <SummaryRow
+            <CategoryCard
               key={row.category}
               row={row}
               editing={editingCategory === row.category}
@@ -41,43 +48,47 @@ function SummaryTable({ summary, status, onRetry, onLimitSaved, onUnreachable })
   )
 }
 
-function SummaryRow({ row, editing, onEdit, onClose, onLimitSaved, onUnreachable }) {
+function CategoryCard({ row, editing, onEdit, onClose, onLimitSaved, onUnreachable }) {
   const hasLimit = row.limit_paise !== null
+  const percent = hasLimit ? limitUsedPercent(row.spent_paise, row.limit_paise) : 0
 
   return (
-    <li className={row.over_limit ? 'summary-row over-limit' : 'summary-row'}>
-      <div className="summary-heading">
-        <span className="summary-category">{row.category}</span>
+    <li className={row.over_limit ? 'card category-card over-limit' : 'card category-card'}>
+      <div className="category-card-top">
+        <h3 className="category-name">{row.category}</h3>
         {!editing && (
-          <button type="button" className="secondary" onClick={onEdit}>
+          <button type="button" className="secondary small" onClick={onEdit}>
             {hasLimit ? 'Change limit' : 'Set limit'}
           </button>
         )}
       </div>
 
-      <dl className="summary-numbers">
-        <div>
-          <dt>Spent</dt>
-          <dd>{formatRupees(row.spent_paise)}</dd>
-        </div>
-        <div>
-          <dt>Limit</dt>
-          <dd>{hasLimit ? formatRupees(row.limit_paise) : 'No limit set'}</dd>
-        </div>
-        {/* When over, the warning below replaces a negative "remaining". */}
-        {!row.over_limit && (
-          <div>
-            <dt>Remaining</dt>
-            <dd>{hasLimit ? formatRupees(row.remaining_paise) : '-'}</dd>
-          </div>
-        )}
-      </dl>
+      <p className="category-spent">
+        {hasLimit
+          ? `${formatRupees(row.spent_paise)} of ${formatRupees(row.limit_paise)}`
+          : `${formatRupees(row.spent_paise)} spent`}
+      </p>
 
-      {row.over_limit && (
-        <p className="over-limit-warning">
-          Over limit by {formatRupees(row.spent_paise - row.limit_paise)}
-        </p>
+      {hasLimit && (
+        <div
+          className="progress"
+          role="progressbar"
+          aria-label={`${row.category} limit used`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(percent)}
+        >
+          <div className="progress-fill" style={{ width: `${percent}%` }} />
+        </div>
       )}
+
+      <p className={row.over_limit ? 'category-status over-limit-warning' : 'category-status'}>
+        {row.over_limit
+          ? `Over limit by ${formatRupees(row.spent_paise - row.limit_paise)}`
+          : hasLimit
+            ? `${formatRupees(row.remaining_paise)} left`
+            : 'No limit set'}
+      </p>
 
       {editing && (
         <LimitEditor
@@ -100,7 +111,7 @@ function LimitEditor({ category, currentLimit, onCancel, onSaved, onUnreachable 
 
   async function handleSubmit(event) {
     event.preventDefault()
-    const parsed = parseRupees(value)
+    const parsed = parseRupees(value, LIMIT_MESSAGES)
     if (parsed.error) {
       setError(parsed.error)
       return
@@ -121,7 +132,7 @@ function LimitEditor({ category, currentLimit, onCancel, onSaved, onUnreachable 
 
   return (
     <form className="limit-editor" onSubmit={handleSubmit} noValidate>
-      <label htmlFor={inputId}>Monthly limit for {category} (Rs)</label>
+      <label htmlFor={inputId}>Monthly limit (Rs)</label>
       <div className="limit-editor-controls">
         <input
           id={inputId}
@@ -149,4 +160,4 @@ function LimitEditor({ category, currentLimit, onCancel, onSaved, onUnreachable 
   )
 }
 
-export default SummaryTable
+export default CategoryCards
