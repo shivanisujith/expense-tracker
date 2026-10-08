@@ -43,6 +43,12 @@ function ExpenseForm({ editing, initialError, onSaved, onNotFound, onCancel, onU
   const [formError, setFormError] = useState(initialError)
   const [saving, setSaving] = useState(false)
 
+  // Links an input to its message below the row, for screen readers.
+  function errorProps(field) {
+    const error = fieldErrors[field]
+    return { 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${field}-error` : undefined }
+  }
+
   function update(field) {
     return (event) => setValues({ ...values, [field]: event.target.value })
   }
@@ -87,79 +93,88 @@ function ExpenseForm({ editing, initialError, onSaved, onNotFound, onCancel, onU
   return (
     <section className="card" id="expense-form">
       <h2>{editing ? 'Edit expense' : 'Add expense'}</h2>
-      {formError && (
-        <p className="form-error" role="alert">
-          {formError}
-        </p>
-      )}
       <form onSubmit={handleSubmit} noValidate>
-        <Field label="Amount (Rs)" id="amount" error={fieldErrors.amount}>
-          <input
-            id="amount"
-            inputMode="decimal"
-            placeholder="12.50"
-            value={values.amount}
-            onChange={update('amount')}
-            aria-invalid={Boolean(fieldErrors.amount)}
-            aria-describedby={fieldErrors.amount ? 'amount-error' : undefined}
-          />
-        </Field>
+        <div className="form-row">
+          <Field label="Amount (Rs)" id="amount">
+            <input
+              id="amount"
+              inputMode="decimal"
+              placeholder="12.50"
+              value={values.amount}
+              onChange={update('amount')}
+              {...errorProps('amount')}
+            />
+          </Field>
 
-        <Field label="Category" id="category" error={fieldErrors.category}>
-          <select id="category" value={values.category} onChange={update('category')}>
-            {CATEGORIES.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
-        </Field>
+          <Field label="Category" id="category">
+            <select
+              id="category"
+              value={values.category}
+              onChange={update('category')}
+              {...errorProps('category')}
+            >
+              {CATEGORIES.map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </Field>
 
-        <Field label="Date" id="date" error={fieldErrors.date}>
-          <input
-            id="date"
-            type="date"
-            max={todayText()}
-            value={values.date}
-            onChange={update('date')}
-            aria-invalid={Boolean(fieldErrors.date)}
-            aria-describedby={fieldErrors.date ? 'date-error' : undefined}
-          />
-        </Field>
+          <Field label="Date" id="date">
+            <input
+              id="date"
+              type="date"
+              max={todayText()}
+              value={values.date}
+              onChange={update('date')}
+              {...errorProps('date')}
+            />
+          </Field>
 
-        <Field label="Note (optional)" id="note" error={fieldErrors.note}>
-          <input
-            id="note"
-            value={values.note}
-            onChange={update('note')}
-            aria-invalid={Boolean(fieldErrors.note)}
-            aria-describedby={fieldErrors.note ? 'note-error' : undefined}
-          />
-        </Field>
+          <Field label="Note (optional)" id="note" wide>
+            <input id="note" value={values.note} onChange={update('note')} {...errorProps('note')} />
+          </Field>
 
-        <div className="form-buttons">
-          <button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : editing ? 'Save changes' : 'Add expense'}
-          </button>
-          {editing && (
-            <button type="button" className="secondary" onClick={onCancel} disabled={saving}>
-              Cancel
+          <div className="form-buttons">
+            <button type="submit" disabled={saving}>
+              {saving ? 'Saving...' : editing ? 'Save changes' : 'Add expense'}
             </button>
-          )}
+            {editing && (
+              <button type="button" className="secondary" onClick={onCancel} disabled={saving}>
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
+
+        <FormMessages formError={formError} fieldErrors={fieldErrors} />
       </form>
     </section>
   )
 }
 
-function Field({ label, id, error, children }) {
+const FIELD_LABELS = { amount: 'Amount', category: 'Category', date: 'Date', note: 'Note' }
+
+/** Field and form errors, shown together just below the form row. */
+function FormMessages({ formError, fieldErrors }) {
+  const fields = Object.keys(FIELD_LABELS).filter((field) => fieldErrors[field])
+  if (!formError && fields.length === 0) return null
   return (
-    <div className="field">
+    <div className="form-messages" role="alert">
+      {formError && <p className="form-error">{formError}</p>}
+      {fields.map((field) => (
+        <p key={field} className="field-error" id={`${field}-error`}>
+          {FIELD_LABELS[field]}: {fieldErrors[field]}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function Field({ label, id, wide = false, children }) {
+  return (
+    <div className={wide ? 'field field-wide' : 'field'}>
       <label htmlFor={id}>{label}</label>
       {children}
-      {error && (
-        <p className="field-error" id={`${id}-error`}>
-          {error}
-        </p>
-      )}
     </div>
   )
 }

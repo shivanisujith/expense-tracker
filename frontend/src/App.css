@@ -133,11 +133,6 @@ button.small {
   font-size: 0.875rem;
 }
 
-button.secondary.danger {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
 button.danger-solid,
 button.danger-solid:hover:not(:disabled) {
   border-color: var(--danger);
@@ -273,9 +268,12 @@ button.danger-solid:hover:not(:disabled) {
   border-color: var(--danger);
 }
 
-/* Form */
-.field {
-  margin-bottom: 12px;
+/* Add form: one row on a laptop */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2fr auto;
+  gap: 12px;
+  align-items: end;
 }
 
 .field label {
@@ -289,16 +287,31 @@ button.danger-solid:hover:not(:disabled) {
 .field select {
   font: inherit;
   width: 100%;
-  max-width: 320px;
-  padding: 7px 10px;
+  height: 38px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--card);
   color: var(--text);
 }
 
-.field input[aria-invalid='true'] {
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
   border-color: var(--danger);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.form-buttons button {
+  height: 38px;
+  white-space: nowrap;
+}
+
+.form-messages {
+  margin-top: 10px;
 }
 
 .field-error,
@@ -309,16 +322,10 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .form-error {
-  margin: 0 0 12px;
   font-weight: 600;
 }
 
-.form-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-/* Expense list */
+/* Expense list: one clean row per expense */
 .expense-list {
   list-style: none;
   margin: 0;
@@ -326,13 +333,12 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .expense-item {
-  padding: 10px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--border);
 }
 
 .expense-item:first-child {
   border-top: none;
-  padding-top: 0;
 }
 
 .expense-item.editing {
@@ -343,38 +349,49 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .expense-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 110px 130px minmax(0, 1fr) auto auto;
+  gap: 4px 16px;
+  align-items: center;
 }
 
-.expense-main {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
+.expense-date {
+  color: var(--muted);
+}
+
+.expense-note {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .expense-amount {
   font-weight: 600;
-}
-
-.expense-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.expense-note {
-  overflow-wrap: anywhere;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .item-buttons {
   display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+  gap: 2px;
+}
+
+.icon-button,
+.icon-button:hover:not(:disabled) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--highlight);
+  color: var(--accent);
 }
 
 .confirm-delete {
@@ -383,6 +400,7 @@ button.danger-solid:hover:not(:disabled) {
   border: 1px solid var(--danger-border);
   border-radius: 8px;
   background: var(--danger-background);
+  color: var(--danger);
 }
 
 .confirm-delete p {
@@ -390,15 +408,70 @@ button.danger-solid:hover:not(:disabled) {
   font-weight: 600;
 }
 
-/* Tablet: 2 cards per row. Phone: everything in one column. */
+.confirm-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Tablet: 2 cards per row, form in two rows. Phone: everything in one column. */
 @media (max-width: 900px) {
   .category-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .form-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .field-wide {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 600px) {
-  .category-grid {
+  .category-grid,
+  .form-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-wide {
+    grid-column: auto;
+  }
+
+  .form-buttons button {
+    flex: 1;
+  }
+
+  /* Expense row: category and amount on top, date and note below. */
+  .expense-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'category amount buttons'
+      'date date buttons'
+      'note note buttons';
+    gap: 0 12px;
+  }
+
+  .expense-category {
+    grid-area: category;
+    font-weight: 500;
+  }
+
+  .expense-date {
+    grid-area: date;
+    font-size: 0.9rem;
+  }
+
+  .expense-note {
+    grid-area: note;
+    font-size: 0.9rem;
+  }
+
+  .expense-amount {
+    grid-area: amount;
+  }
+
+  .item-buttons {
+    grid-area: buttons;
   }
 }

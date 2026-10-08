@@ -101,32 +101,24 @@ function ExpenseItem({
   return (
     <li className={isEditing ? 'expense-item editing' : 'expense-item'}>
       <div className="expense-row">
-        <div>
-          <div className="expense-main">
-            <span className="expense-amount">{formatRupees(expense.amount_paise)}</span>
-            <span className="expense-category">{expense.category}</span>
-          </div>
-          <div className="expense-details">
-            <span>{formatDate(expense.date)}</span>
-            {expense.note && <span className="expense-note">{expense.note}</span>}
-          </div>
+        <span className="expense-date">{formatDate(expense.date)}</span>
+        <span className="expense-category">{expense.category}</span>
+        <span className="expense-note">{expense.note}</span>
+        <span className="expense-amount">{formatRupees(expense.amount_paise)}</span>
+        <div className="item-buttons">
+          <IconButton label="Edit expense" onClick={onEdit} disabled={confirming}>
+            <PencilIcon />
+          </IconButton>
+          <IconButton label="Delete expense" onClick={onAskDelete} disabled={confirming}>
+            <BinIcon />
+          </IconButton>
         </div>
-        {!confirming && (
-          <div className="item-buttons">
-            <button type="button" className="secondary" onClick={onEdit}>
-              Edit
-            </button>
-            <button type="button" className="secondary danger" onClick={onAskDelete}>
-              Delete
-            </button>
-          </div>
-        )}
       </div>
 
       {confirming && (
         <div className="confirm-delete" role="alert">
           <p>Delete this expense? This can't be undone.</p>
-          <div className="item-buttons">
+          <div className="confirm-buttons">
             <button type="button" className="danger-solid" onClick={onConfirmDelete} disabled={deleting}>
               {deleting ? 'Deleting...' : 'Delete'}
             </button>
@@ -137,6 +129,52 @@ function ExpenseItem({
         </div>
       )}
     </li>
+  )
+}
+
+// `label` is read by screen readers and shown as a tooltip on hover.
+function IconButton({ label, onClick, disabled, children }) {
+  return (
+    <button
+      type="button"
+      className="icon-button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path
+        d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function BinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path
+        d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
