@@ -45,9 +45,9 @@ body {
 }
 
 .header-inner {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 14px 16px;
+  padding: 14px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -60,7 +60,7 @@ body {
   font-weight: 700;
 }
 
-.header-month {
+.header-date {
   margin: 0;
   color: var(--muted);
   font-weight: 500;
@@ -68,9 +68,9 @@ body {
 
 /* Page */
 .app {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px 16px 32px;
+  padding: 20px 24px 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -168,13 +168,28 @@ button.danger-solid:hover:not(:disabled) {
   margin: 0 0 8px;
 }
 
+/* Two columns under the form: category cards (about 55%) and the list. */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+  gap: 20px;
+  align-items: start;
+}
+
 /* Category cards */
+.month-label {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .category-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -295,6 +310,15 @@ button.danger-solid:hover:not(:disabled) {
   color: var(--text);
 }
 
+/* "Choose a category" shows in grey until a category is picked. */
+.field select.placeholder {
+  color: var(--muted);
+}
+
+.field select option {
+  color: var(--text);
+}
+
 .field input[aria-invalid='true'],
 .field select[aria-invalid='true'] {
   border-color: var(--danger);
@@ -325,7 +349,12 @@ button.danger-solid:hover:not(:disabled) {
   font-weight: 600;
 }
 
-/* Expense list: one clean row per expense */
+/* Expense list: one clean row per expense. The card is a "container" so
+   its rows can wrap based on the card's own width, not the screen's. */
+.expense-section {
+  container-type: inline-size;
+}
+
 .expense-list {
   list-style: none;
   margin: 0;
@@ -441,36 +470,9 @@ button.danger-solid:hover:not(:disabled) {
   margin-top: 20px;
 }
 
-/* Tablet: 2 cards per row, form in two rows. Phone: everything in one column. */
-@media (max-width: 900px) {
-  .category-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .form-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .field-wide {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 600px) {
-  .category-grid,
-  .form-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .field-wide {
-    grid-column: auto;
-  }
-
-  .form-buttons button {
-    flex: 1;
-  }
-
-  /* Expense row: category and amount on top, date and note below. */
+/* Expense rows in a narrow list card: category and amount on top,
+   date and note below, icons kept on the right. */
+@container (max-width: 560px) {
   .expense-row {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
@@ -501,5 +503,50 @@ button.danger-solid:hover:not(:disabled) {
 
   .item-buttons {
     grid-area: buttons;
+  }
+}
+
+/* Narrower than a laptop: the two columns stack (cards, then list). */
+@media (max-width: 1000px) {
+  .dashboard-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Tablet: form in two rows. */
+@media (max-width: 900px) {
+  .form-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .field-wide {
+    grid-column: span 2;
+  }
+}
+
+/* Phone: everything in one column. */
+@media (max-width: 600px) {
+  .header-inner,
+  .app {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .header-inner {
+    flex-wrap: wrap;
+    gap: 2px 16px;
+  }
+
+  .category-grid,
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-wide {
+    grid-column: auto;
+  }
+
+  .form-buttons button {
+    flex: 1;
   }
 }

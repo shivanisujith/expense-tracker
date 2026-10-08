@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { setLimit } from '../api.js'
+import { formatMonth } from '../dates.js'
 import {
   LIMIT_MESSAGES,
   formatRupees,
@@ -14,9 +15,16 @@ function CategoryCards({ summary, status, onRetry, onLimitSaved, onUnreachable }
 
   return (
     <section className="category-section" aria-labelledby="categories-heading">
-      <h2 id="categories-heading" className="visually-hidden">
-        This month's spending by category
-      </h2>
+      {/* Shown with the cards, so the month always matches what they count. */}
+      {summary && status !== 'error' ? (
+        <h2 id="categories-heading" className="month-label">
+          This month: {formatMonth(summary.month)}
+        </h2>
+      ) : (
+        <h2 id="categories-heading" className="visually-hidden">
+          This month's spending by category
+        </h2>
+      )}
       {status === 'error' ? (
         <div className="card section-error" role="alert">
           <p>Couldn't load the summary. Please try again.</p>

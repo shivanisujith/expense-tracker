@@ -23,3 +23,11 @@ export function formatMonth(text) {
   const [year, month] = text.split('-')
   return `${FULL_MONTHS[Number(month) - 1]} ${year}`
 }
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+/** Today in the browser's own clock, e.g. "Thursday, 8 October 2026". */
+export function formatFullDate(now = new Date()) {
+  const weekday = WEEKDAYS[now.getDay()]
+  return `${weekday}, ${now.getDate()} ${FULL_MONTHS[now.getMonth()]} ${now.getFullYear()}`
+}

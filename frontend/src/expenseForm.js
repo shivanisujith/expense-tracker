@@ -10,8 +10,9 @@ export const FORM_FIELD = { amount_paise: 'amount', category: 'category', date: 
 
 export const FIELD_LABELS = { amount: 'Amount', category: 'Category', date: 'Date', note: 'Note' }
 
+// Category starts empty, so the box shows "Choose a category".
 export function emptyForm() {
-  return { amount: '', category: 'Food', date: todayText(), note: '' }
+  return { amount: '', category: '', date: todayText(), note: '' }
 }
 
 export function formFromExpense(expense) {
@@ -31,6 +32,7 @@ export function checkForm(values, today = todayText()) {
   const errors = {}
   const amount = parseRupees(values.amount)
   if (amount.error) errors.amount = amount.error
+  if (values.category === '') errors.category = 'Please choose a category.'
   if (values.date === '') errors.date = 'Please choose a date.'
   else if (values.date > today) errors.date = 'Date cannot be in the future.'
   if (values.note.trim().length > NOTE_MAX_LENGTH) {

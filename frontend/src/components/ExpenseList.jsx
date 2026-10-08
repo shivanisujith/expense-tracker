@@ -32,7 +32,7 @@ function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onUnreachab
   }
 
   return (
-    <section className="card">
+    <section className="card expense-section">
       <h2>Expenses</h2>
       {deleteError && (
         <p className="form-error" role="alert">

@@ -65,10 +65,14 @@ function ExpenseForm({ onSaved, onUnreachable }) {
           <Field label="Category" id="category">
             <select
               id="category"
+              className={values.category === '' ? 'placeholder' : undefined}
               value={values.category}
               onChange={update('category')}
               {...errorProps('category')}
             >
+              <option value="" disabled>
+                Choose a category
+              </option>
               {CATEGORIES.map((name) => (
                 <option key={name}>{name}</option>
               ))}

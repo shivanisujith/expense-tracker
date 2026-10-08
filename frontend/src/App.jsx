@@ -6,7 +6,7 @@ import EditExpenseModal from './components/EditExpenseModal.jsx'
 import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
-import { formatMonth } from './dates.js'
+import { formatFullDate } from './dates.js'
 
 function statusFor(result) {
   if (result.status === 'fulfilled') return 'loaded'
@@ -60,27 +60,29 @@ function App() {
       <header className="header-bar">
         <div className="header-inner">
           <h1>Expense Tracker</h1>
-          {summary && <p className="header-month">{formatMonth(summary.month)}</p>}
+          <p className="header-date">{formatFullDate()}</p>
         </div>
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
-        <CategoryCards
-          summary={summary}
-          status={summaryStatus}
-          onRetry={loadAll}
-          onLimitSaved={loadAll}
-          onUnreachable={showUnreachable}
-        />
         <ExpenseForm onSaved={loadAll} onUnreachable={showUnreachable} />
-        <ExpenseList
-          expenses={expenses}
-          status={listStatus}
-          onRetry={loadAll}
-          onEdit={setEditing}
-          onDeleted={loadAll}
-          onUnreachable={showUnreachable}
-        />
+        <div className="dashboard-columns">
+          <CategoryCards
+            summary={summary}
+            status={summaryStatus}
+            onRetry={loadAll}
+            onLimitSaved={loadAll}
+            onUnreachable={showUnreachable}
+          />
+          <ExpenseList
+            expenses={expenses}
+            status={listStatus}
+            onRetry={loadAll}
+            onEdit={setEditing}
+            onDeleted={loadAll}
+            onUnreachable={showUnreachable}
+          />
+        </div>
       </main>
       {editing && (
         <EditExpenseModal

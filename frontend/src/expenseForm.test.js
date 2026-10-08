@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { checkForm, formFromExpense } from './expenseForm.js'
+import { checkForm, emptyForm, formFromExpense } from './expenseForm.js'
 
 const TODAY = '2026-10-08'
 
@@ -18,6 +18,12 @@ describe('checkForm', () => {
   test('an empty amount is refused', () => {
     const result = checkForm(form({ amount: '' }), TODAY)
     expect(result.errors).toEqual({ amount: 'Please enter an amount.' })
+    expect(result.expense).toBeUndefined()
+  })
+
+  test('no category chosen is refused', () => {
+    const result = checkForm(form({ category: '' }), TODAY)
+    expect(result.errors).toEqual({ category: 'Please choose a category.' })
     expect(result.expense).toBeUndefined()
   })
 
@@ -44,8 +50,22 @@ describe('checkForm', () => {
   })
 
   test('every failing field is reported at once', () => {
-    const result = checkForm(form({ amount: '-5', date: '', note: 'x'.repeat(101) }), TODAY)
-    expect(Object.keys(result.errors)).toEqual(['amount', 'date', 'note'])
+    const result = checkForm(
+      form({ amount: '-5', category: '', date: '', note: 'x'.repeat(101) }),
+      TODAY,
+    )
+    expect(Object.keys(result.errors)).toEqual(['amount', 'category', 'date', 'note'])
+  })
+})
+
+describe('emptyForm', () => {
+  test('starts with no category chosen', () => {
+    expect(emptyForm().category).toBe('')
+  })
+
+  test('fails the category check until one is chosen', () => {
+    const values = { ...emptyForm(), amount: '10' }
+    expect(checkForm(values).errors).toEqual({ category: 'Please choose a category.' })
   })
 })
 
