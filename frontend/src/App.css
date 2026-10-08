@@ -1,19 +1,21 @@
 /* Colours from specs/frontend-spec.md ("Colours and contrast"). Every text
    pair is at least 4.5:1 and bars/borders at least 3:1. Sage is the only
-   accent; red is only for over-limit warnings and errors. */
+   accent; red is only for over-limit warnings and errors. No pure white. */
 :root {
   --page: #fbe4ec; /* baby pink */
-  --card: #ffffff;
-  --text: #1f2937;
-  --muted: #5b6370; /* grey text: only on white */
-  --border: #e7d6dd;
+  --box: #f8f1e3; /* soft cream: boxes and the popup */
+  --surface: #fdf9f0; /* lighter cream: cards, inputs, light buttons */
+  --text: #3d2133; /* deep plum: main text */
+  --muted: #6a5260; /* muted plum: dates, notes, labels, hints */
+  --border: #e2d5c3;
   --accent: #4f6f52; /* deep sage */
   --accent-hover: #3f5a42;
-  --accent-text: #ffffff;
+  --subtitle: #553047; /* plum: page title's second line */
+  --accent-text: #fdf9f0; /* light cream text on sage and red */
   --track: #e3eae0; /* light sage */
   --highlight: #eef3ec;
   --danger: #b91c1c;
-  --danger-background: #fef2f2;
+  --danger-background: #fbd5d5; /* stronger than the creams on purpose */
   --danger-border: #dc2626;
   --radius: 12px;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.05);
@@ -31,32 +33,23 @@ body {
   line-height: 1.45;
 }
 
-/* Header bar */
-.header-bar {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-}
-
-.header-inner {
+/* Page title: sits directly on the pink page, no bar or box. */
+.page-title {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 14px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  padding: 28px 24px 0;
 }
 
-.header-bar h1 {
+.page-title h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 2rem;
   font-weight: 700;
+  line-height: 1.2;
 }
 
-.header-date {
-  margin: 0;
-  color: var(--muted);
-  font-weight: 500;
+.page-subtitle {
+  margin: 4px 0 0;
+  color: var(--subtitle);
 }
 
 /* Page */
@@ -76,7 +69,7 @@ h2 {
 }
 
 .card {
-  background: var(--card);
+  background: var(--box);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -111,7 +104,7 @@ button:disabled {
 }
 
 button.secondary {
-  background: var(--card);
+  background: var(--surface);
   border-color: var(--border);
   color: var(--accent);
 }
@@ -180,6 +173,7 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .category-card {
+  background: var(--surface);
   box-shadow: none;
   display: flex;
   flex-direction: column;
@@ -245,6 +239,7 @@ button.danger-solid:hover:not(:disabled) {
 
 .limit-editor label {
   display: block;
+  color: var(--muted);
   font-weight: 500;
   font-size: 0.875rem;
   margin-bottom: 4px;
@@ -263,7 +258,7 @@ button.danger-solid:hover:not(:disabled) {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card);
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -281,6 +276,7 @@ button.danger-solid:hover:not(:disabled) {
 
 .field label {
   display: block;
+  color: var(--muted);
   font-weight: 500;
   font-size: 0.875rem;
   margin-bottom: 4px;
@@ -294,7 +290,7 @@ button.danger-solid:hover:not(:disabled) {
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card);
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -429,7 +425,7 @@ button.danger-solid:hover:not(:disabled) {
   padding: 20px;
   border: none;
   border-radius: var(--radius);
-  background: var(--card);
+  background: var(--box);
   color: var(--text);
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.2);
 }
@@ -514,15 +510,14 @@ button.danger-solid:hover:not(:disabled) {
 
 /* Phone: everything in one column. */
 @media (max-width: 600px) {
-  .header-inner,
+  .page-title,
   .app {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .header-inner {
-    flex-wrap: wrap;
-    gap: 2px 16px;
+  .page-title h1 {
+    font-size: 1.6rem;
   }
 
   .category-grid,

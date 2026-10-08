@@ -57,11 +57,9 @@ function App() {
 
   return (
     <>
-      <header className="header-bar">
-        <div className="header-inner">
-          <h1>Expense Tracker</h1>
-          <p className="header-date">{formatFullDate()}</p>
-        </div>
+      <header className="page-title">
+        <h1>Expense Tracker</h1>
+        <p className="page-subtitle">{`Hi there, here's your spending · ${formatFullDate()}`}</p>
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
