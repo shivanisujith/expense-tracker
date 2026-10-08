@@ -74,7 +74,7 @@ in each one and whether they are staying within its limit.
 - Logins and multiple users (one person per copy of the app).
 - Creating, renaming, or deleting categories (the list is fixed).
 - Currencies other than Indian rupees.
-- Charts and graphs.
+- Charts and graphs. (Exception: a simple progress bar on each category card, showing how much of its limit is used, is allowed.)
 - Bank or UPI connections.
 - Receipt photos or scanning.
 - Exporting to Excel or PDF.
