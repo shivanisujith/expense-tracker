@@ -341,13 +341,6 @@ button.danger-solid:hover:not(:disabled) {
   border-top: none;
 }
 
-.expense-item.editing {
-  background: var(--highlight);
-  margin: 0 -16px;
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
 .expense-row {
   display: grid;
   grid-template-columns: 110px 130px minmax(0, 1fr) auto auto;
@@ -411,6 +404,41 @@ button.danger-solid:hover:not(:disabled) {
 .confirm-buttons {
   display: flex;
   gap: 8px;
+}
+
+/* Edit popup */
+.modal {
+  width: min(440px, calc(100vw - 32px));
+  padding: 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 0.2);
+}
+
+.modal::backdrop {
+  background: rgb(17 24 39 / 0.5);
+}
+
+.modal-message {
+  margin: 0 0 12px;
+}
+
+.modal-fields {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 /* Tablet: 2 cards per row, form in two rows. Phone: everything in one column. */

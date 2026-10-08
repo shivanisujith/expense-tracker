@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 import { getSummary, listExpenses } from './api.js'
 import CategoryCards from './components/CategoryCards.jsx'
+import EditExpenseModal from './components/EditExpenseModal.jsx'
 import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
@@ -21,10 +22,8 @@ function App() {
   const [unreachable, setUnreachable] = useState(false)
   const [retrying, setRetrying] = useState(false)
 
-  // The expense being edited (null = add mode), and a message for the form
-  // that must survive the form switching back to add mode.
+  // The expense open in the edit popup, or null when the popup is closed.
   const [editing, setEditing] = useState(null)
-  const [formNotice, setFormNotice] = useState('')
 
   // The frontend never works out totals itself: after every change it
   // reloads both the list and the summary from the backend.
@@ -51,30 +50,8 @@ function App() {
     setUnreachable(true)
   }
 
-  function startEditing(expense) {
-    setFormNotice('')
-    setEditing(expense)
-    document.getElementById('expense-form')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  function stopEditing() {
-    setFormNotice('')
+  function handleEditSaved() {
     setEditing(null)
-  }
-
-  function handleFormSaved() {
-    stopEditing()
-    loadAll()
-  }
-
-  function handleEditNotFound(message) {
-    setEditing(null)
-    setFormNotice(message)
-    loadAll()
-  }
-
-  function handleDeleted(id) {
-    if (editing?.id === id) stopEditing()
     loadAll()
   }
 
@@ -95,25 +72,26 @@ function App() {
           onLimitSaved={loadAll}
           onUnreachable={showUnreachable}
         />
-        <ExpenseForm
-          key={editing ? `edit-${editing.id}` : 'add'}
-          editing={editing}
-          initialError={formNotice}
-          onSaved={handleFormSaved}
-          onNotFound={handleEditNotFound}
-          onCancel={stopEditing}
-          onUnreachable={showUnreachable}
-        />
+        <ExpenseForm onSaved={loadAll} onUnreachable={showUnreachable} />
         <ExpenseList
           expenses={expenses}
           status={listStatus}
-          editingId={editing?.id ?? null}
           onRetry={loadAll}
-          onEdit={startEditing}
-          onDeleted={handleDeleted}
+          onEdit={setEditing}
+          onDeleted={loadAll}
           onUnreachable={showUnreachable}
         />
       </main>
+      {editing && (
+        <EditExpenseModal
+          key={editing.id}
+          expense={editing}
+          onSaved={handleEditSaved}
+          onClose={() => setEditing(null)}
+          onNotFound={loadAll}
+          onUnreachable={showUnreachable}
+        />
+      )}
     </>
   )
 }

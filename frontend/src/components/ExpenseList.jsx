@@ -4,7 +4,7 @@ import { formatDate } from '../dates.js'
 import { formatRupees } from '../money.js'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function ExpenseList({ expenses, status, editingId, onRetry, onEdit, onDeleted, onUnreachable }) {
+function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onUnreachable }) {
   const [confirmingId, setConfirmingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [deleteError, setDeleteError] = useState('')
@@ -47,7 +47,6 @@ function ExpenseList({ expenses, status, editingId, onRetry, onEdit, onDeleted, 
           <ExpenseItem
             key={expense.id}
             expense={expense}
-            isEditing={expense.id === editingId}
             confirming={expense.id === confirmingId}
             deleting={expense.id === deletingId}
             onEdit={() => {
@@ -90,7 +89,6 @@ function ListBody({ expenses, status, onRetry, renderItem }) {
 
 function ExpenseItem({
   expense,
-  isEditing,
   confirming,
   deleting,
   onEdit,
@@ -99,7 +97,7 @@ function ExpenseItem({
   onConfirmDelete,
 }) {
   return (
-    <li className={isEditing ? 'expense-item editing' : 'expense-item'}>
+    <li className="expense-item">
       <div className="expense-row">
         <span className="expense-date">{formatDate(expense.date)}</span>
         <span className="expense-category">{expense.category}</span>
