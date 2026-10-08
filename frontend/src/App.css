@@ -1,18 +1,20 @@
-/* Colours: one calm blue accent; red only for over-limit warnings and errors. */
+/* Colours from specs/frontend-spec.md ("Colours and contrast"). Every text
+   pair is at least 4.5:1 and bars/borders at least 3:1. Sage is the only
+   accent; red is only for over-limit warnings and errors. */
 :root {
-  --page: #e2e5ea;
+  --page: #fbe4ec; /* baby pink */
   --card: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --text: #1f2937;
+  --muted: #5b6370; /* grey text: only on white */
+  --border: #e7d6dd;
+  --accent: #4f6f52; /* deep sage */
+  --accent-hover: #3f5a42;
   --accent-text: #ffffff;
-  --track: #e5e7eb;
-  --highlight: #eff6ff;
-  --danger: #dc2626;
+  --track: #e3eae0; /* light sage */
+  --highlight: #eef3ec;
+  --danger: #b91c1c;
   --danger-background: #fef2f2;
-  --danger-border: #fca5a5;
+  --danger-border: #dc2626;
   --radius: 12px;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 }
@@ -27,15 +29,6 @@ body {
   color: var(--text);
   background: var(--page);
   line-height: 1.45;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 /* Header bar */
@@ -177,13 +170,6 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 /* Category cards */
-.month-label {
-  margin: 0 0 10px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
 .category-grid {
   list-style: none;
   margin: 0;
@@ -194,6 +180,7 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .category-card {
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -238,7 +225,8 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .category-card.over-limit {
-  border-color: var(--danger-border);
+  border: 2px solid var(--danger-border);
+  padding: 15px;
   background: var(--danger-background);
 }
 

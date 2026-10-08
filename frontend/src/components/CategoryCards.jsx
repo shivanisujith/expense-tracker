@@ -14,19 +14,13 @@ function CategoryCards({ summary, status, onRetry, onLimitSaved, onUnreachable }
   const [editingCategory, setEditingCategory] = useState(null)
 
   return (
-    <section className="category-section" aria-labelledby="categories-heading">
-      {/* Shown with the cards, so the month always matches what they count. */}
-      {summary && status !== 'error' ? (
-        <h2 id="categories-heading" className="month-label">
-          This month: {formatMonth(summary.month)}
-        </h2>
-      ) : (
-        <h2 id="categories-heading" className="visually-hidden">
-          This month's spending by category
-        </h2>
-      )}
+    <section className="card category-section" aria-labelledby="categories-heading">
+      {/* The month comes with the cards, so it always matches what they count. */}
+      <h2 id="categories-heading">
+        {summary && status !== 'error' ? `This month: ${formatMonth(summary.month)}` : 'This month'}
+      </h2>
       {status === 'error' ? (
-        <div className="card section-error" role="alert">
+        <div className="section-error" role="alert">
           <p>Couldn't load the summary. Please try again.</p>
           <button type="button" onClick={onRetry}>
             Try again
