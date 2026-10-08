@@ -22,8 +22,10 @@ frontend checks below are only for convenience.
 ## Screen layout
 The app is **one page** laid out as a dashboard, with these parts:
 
-1. **Header bar**: the app name "Expense Tracker" and today's full date,
-   for example "Thursday, 8 October 2026".
+1. **Page title**: "Expense Tracker", with a greeting and today's full
+   date underneath, for example "Hi there, here's your spending ·
+   Thursday, 8 October 2026". It sits directly on the pink page, with no
+   bar or box behind it.
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Add expense form**: one horizontal row across the full width.
 4. Below the form, **two columns** side by side:
@@ -31,8 +33,8 @@ The app is **one page** laid out as a dashboard, with these parts:
      "This month: October 2026", holding all six category cards.
    - **Right: the Expenses box**, all expenses, newest first.
 
-On a phone, these all stack into one column in the order above: header
-bar, banner, add form, category cards, expense list.
+On a phone, these all stack into one column in the order above: page
+title, banner, add form, category cards, expense list.
 
 Editing an expense happens in a **popup**, not in the add form (see
 section 3).
@@ -51,7 +53,8 @@ section 3).
 - **Page background:** soft baby pink.
 - **No white surfaces:** nothing on the page has a pure white
   background, because white does not match the pink and green.
-- **Header bar:** deep sage green, with light cream text.
+- **No header bar:** the page title sits directly on the pink page, with
+  no bar or box behind it.
 - **Boxes:** soft cream, with rounded corners and a thin border so they
   stand out from the pink page. The add form, the category box, the
   Expenses box, and the edit popup are cream boxes.
@@ -59,15 +62,23 @@ section 3).
   boxes, with a thin border, so they still stand out inside the boxes.
   Light (secondary) buttons, such as Cancel and Set limit, use the same
   lighter cream.
-- **Accent colour:** sage green, used for the header bar, buttons, links,
-  and progress bars. No other accent colours. Buttons use a deep sage so
-  the light cream text on them is easy to read.
+- **Accent colour:** sage green, used for buttons, links, and progress
+  bars. No other accent colours. Buttons use a deep sage so the light
+  cream text on them is easy to read.
 - **Red:** used **only** for over-limit warnings and error messages
   (including the server banner and the delete confirmation). Nothing else
   is red.
-- **Grey text** (such as dates and notes) is only placed on the creams,
-  never directly on the pink page or on the light red of an over-limit
-  card, where it would be too faint.
+- **Text colours:** deep plum shades that match the pink page, instead of
+  near-black and grey:
+  - **Main text** (titles, headings, amounts, category names): deep plum.
+  - **Page subtitle** (the line under "Expense Tracker"): a slightly
+    lighter plum.
+  - **Secondary text** (dates, notes, "Rs X left", "No limit set", form
+    labels, and placeholder text such as "Choose a category"): a softer,
+    muted plum.
+  - All three pass the readability rule on every background they can sit
+    on: pink, cream, lighter cream, and the light red of an over-limit
+    card (see the table below).
 
 ### Colours and contrast
 - **Readability rule:** every colour pair must meet the WCAG AA contrast
@@ -80,18 +91,19 @@ section 3).
 
 | Use | Colour | Contrast |
 |---|---|---|
-| Page background (baby pink) | `#FBE4EC` | main text on it: 12.2 : 1 |
-| Boxes (soft cream) | `#F8F1E3` | main text: 13.1 : 1; grey text: 5.4 : 1 |
-| Cards, inputs, light buttons (lighter cream) | `#FDF9F0` | main text: 14.0 : 1; grey text: 5.8 : 1 |
-| Main text | `#1F2937` | see above |
-| Grey text (dates, notes, hints) | `#5B6370` | see the creams above |
-| Sage: header bar, buttons, links, progress bar | `#4F6F52` | light cream text on it: 5.4 : 1; sage text on cream: 5.0 : 1, on lighter cream: 5.4 : 1 |
+| Page background (baby pink) | `#FBE4EC` | see the text colours below |
+| Boxes (soft cream) | `#F8F1E3` | see the text colours below |
+| Cards, inputs, light buttons (lighter cream) | `#FDF9F0` | see the text colours below |
+| Main text (deep plum) | `#3D2133` | on pink: 11.9 : 1; cream: 12.8 : 1; lighter cream: 13.7 : 1; light red: 10.6 : 1 |
+| Page subtitle (plum) | `#553047` | on pink: 9.2 : 1 (it only sits on pink; also passes on cream 9.8, lighter cream 10.5, light red 8.2) |
+| Secondary text (muted plum) | `#6A5260` | on pink: 5.8 : 1; cream: 6.3 : 1; lighter cream: 6.7 : 1; light red: 5.2 : 1 |
+| Sage: buttons, links, progress bar | `#4F6F52` | light cream text on it: 5.4 : 1; sage text on cream: 5.0 : 1, on lighter cream: 5.4 : 1 |
 | Sage, darker (button hover) | `#3F5A42` | light cream text on it: 7.3 : 1 |
-| Light cream text (header bar, on buttons) | `#FDF9F0` | see the sages above |
+| Light cream text (on buttons) | `#FDF9F0` | see the sages above |
 | Light sage (progress bar track, hover backgrounds) | `#E3EAE0` / `#EEF3EC` | sage bar on track: 4.6 : 1; sage text on hover background: 5.0 : 1 |
 | Red: warning and error text, over-limit bar | `#B91C1C` | on light red: 4.8 : 1; on cream: 5.8 : 1; on lighter cream: 6.2 : 1; on pink: 5.4 : 1; light cream text on it: 6.2 : 1 |
 | Red border (over-limit card) | `#DC2626` | against the cream box: 4.3 : 1 |
-| Light red (over-limit card, banner, delete confirmation) | `#FBD5D5` | main text on it: 10.9 : 1 |
+| Light red (over-limit card, banner, delete confirmation) | `#FBD5D5` | see the text colours above |
 
 - The over-limit card's light red is deliberately stronger than a pale
   pink, so it is clearly different from the creams around it, not only
@@ -103,7 +115,7 @@ section 3).
   example with no internet), the browser's normal system font is used and
   the page still works.
 - **Less scrolling:** the page should look like a website dashboard, not
-  a long document. On a laptop, the header, add form, and the top of both
+  a long document. On a laptop, the page title, add form, and the top of both
   columns (category cards and expense list) should fit on the first
   screen.
 - **Use the screen width:** the page content is up to about 1400 pixels
@@ -122,11 +134,15 @@ section 3).
 - On narrower screens (tablets and phones), the two columns stack into
   one: the category box first, then the Expenses box.
 
-### Header bar
-- A full-width deep sage green bar across the top with "Expense Tracker"
-  on the left and today's full date on the right, for example
-  "Thursday, 8 October 2026" (weekday, day, month name, year). Both are
-  in light cream text.
+### Page title
+- The top of the page has no bar or box: two lines of text sit directly
+  on the pink background, lined up with the left edge of the boxes below.
+  - **Line 1:** "Expense Tracker" in large, bold text, in the main deep
+    plum text colour.
+  - **Line 2,** smaller, underneath: "Hi there, here's your spending · "
+    followed by today's full date, for example "Hi there, here's your
+    spending · Thursday, 8 October 2026" (weekday, day, month name, year).
+    It uses the page subtitle plum.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
 
@@ -171,8 +187,8 @@ section 3).
   columns.
 - On a laptop, all fields sit in **one horizontal row**, in this order:
   Amount, Category, Date, Note, then the **Add expense** button.
-- The Category box starts empty, showing "Choose a category" in grey
-  placeholder text.
+- The Category box starts empty, showing "Choose a category" in muted
+  plum placeholder text.
 - Each field keeps a visible label above it.
 - Error messages appear **just below the row**, each one naming its field
   (for example "Amount: Please enter an amount.").
@@ -203,7 +219,7 @@ section 3).
 - When it opens, the cursor goes to the Amount field.
 
 ### Narrow phone screens
-- Everything stacks into **one column**, in this order: header bar,
+- Everything stacks into **one column**, in this order: page title,
   banner, add form (fields stacked one per line with a full-width
   button), the category box (one card per row), and the Expenses box
   (each row wrapping so the amount and icon buttons stay visible).
@@ -356,11 +372,11 @@ seconds. This covers loading the page, adding, editing, deleting, and
 setting limits.
 
 **What the user sees:**
-- A red banner at the top of the page, just below the header bar:
+- A red banner at the top of the page, just below the page title:
   **"Can't reach the server. Check that the backend is running, then
   try again."**
   with a **Try again** button.
-- The rest of the page still shows: header bar, form, and any cards or
+- The rest of the page still shows: page title, form, and any cards or
   list already loaded. The page is never blank or broken, and no raw
   technical error text is shown.
 - Anything the user had typed in the form, the edit popup, or a limit box
