@@ -10,7 +10,7 @@ frontend checks below are only for convenience.
 - **Empty state:** what shows when there is nothing to list yet.
 - **Error state:** what shows when something went wrong.
 - **Banner:** a coloured message strip across the top of the page.
-- **Card:** a white box with rounded corners that groups related content.
+- **Card:** a box with rounded corners that groups related content.
 - **Grid:** cards arranged in rows and columns.
 - **Progress bar:** a horizontal bar that fills up to show how much of a
   limit has been used.
@@ -27,7 +27,7 @@ The app is **one page** laid out as a dashboard, with these parts:
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Add expense form**: one horizontal row across the full width.
 4. Below the form, **two columns** side by side:
-   - **Left (a bit more than half the width): one white box** headed
+   - **Left (a bit more than half the width): one cream box** headed
      "This month: October 2026", holding all six category cards.
    - **Right: the Expenses box**, all expenses, newest first.
 
@@ -49,19 +49,25 @@ section 3).
 
 ### Overall style
 - **Page background:** soft baby pink.
-- **Boxes and cards:** white, with rounded corners and a thin border, so
-  they stand out clearly from the pink page. The header bar, the add
-  form, the category box, the Expenses box, and the edit popup are white
-  boxes. Each category card is a smaller white card, with a thin border,
-  inside the category box.
-- **Accent colour:** sage green, used for buttons, links, and progress
-  bars. No other accent colours. Buttons use a deep sage so white text
-  on them is easy to read.
+- **No white surfaces:** nothing on the page has a pure white
+  background, because white does not match the pink and green.
+- **Header bar:** deep sage green, with light cream text.
+- **Boxes:** soft cream, with rounded corners and a thin border so they
+  stand out from the pink page. The add form, the category box, the
+  Expenses box, and the edit popup are cream boxes.
+- **Category cards and input fields:** a slightly lighter cream than the
+  boxes, with a thin border, so they still stand out inside the boxes.
+  Light (secondary) buttons, such as Cancel and Set limit, use the same
+  lighter cream.
+- **Accent colour:** sage green, used for the header bar, buttons, links,
+  and progress bars. No other accent colours. Buttons use a deep sage so
+  the light cream text on them is easy to read.
 - **Red:** used **only** for over-limit warnings and error messages
   (including the server banner and the delete confirmation). Nothing else
   is red.
-- **Grey text** (such as dates and notes) is only placed on white, never
-  directly on the pink page, where it would be too faint.
+- **Grey text** (such as dates and notes) is only placed on the creams,
+  never directly on the pink page or on the light red of an over-limit
+  card, where it would be too faint.
 
 ### Colours and contrast
 - **Readability rule:** every colour pair must meet the WCAG AA contrast
@@ -75,15 +81,21 @@ section 3).
 | Use | Colour | Contrast |
 |---|---|---|
 | Page background (baby pink) | `#FBE4EC` | main text on it: 12.2 : 1 |
-| Boxes and cards | `#FFFFFF` | main text on it: 14.7 : 1 |
+| Boxes (soft cream) | `#F8F1E3` | main text: 13.1 : 1; grey text: 5.4 : 1 |
+| Cards, inputs, light buttons (lighter cream) | `#FDF9F0` | main text: 14.0 : 1; grey text: 5.8 : 1 |
 | Main text | `#1F2937` | see above |
-| Grey text (dates, notes, hints) | `#5B6370` | on white: 6.1 : 1 |
-| Sage: buttons, links, progress bar | `#4F6F52` | white text on it: 5.6 : 1; on white: 5.6 : 1 |
-| Sage, darker (button hover) | `#3F5A42` | white text on it: 7.6 : 1 |
-| Light sage (progress bar track, hover backgrounds) | `#E3EAE0` / `#EEF3EC` | sage bar on track: 4.6 : 1 |
-| Red: warning and error text, over-limit bar | `#B91C1C` | on light red: 5.9 : 1; on white: 6.5 : 1; on pink: 5.4 : 1 |
-| Red border (over-limit card) | `#DC2626` | against white: 4.8 : 1 |
-| Light red (over-limit card, banner, delete confirmation) | `#FEF2F2` | main text on it: 13.4 : 1 |
+| Grey text (dates, notes, hints) | `#5B6370` | see the creams above |
+| Sage: header bar, buttons, links, progress bar | `#4F6F52` | light cream text on it: 5.4 : 1; sage text on cream: 5.0 : 1, on lighter cream: 5.4 : 1 |
+| Sage, darker (button hover) | `#3F5A42` | light cream text on it: 7.3 : 1 |
+| Light cream text (header bar, on buttons) | `#FDF9F0` | see the sages above |
+| Light sage (progress bar track, hover backgrounds) | `#E3EAE0` / `#EEF3EC` | sage bar on track: 4.6 : 1; sage text on hover background: 5.0 : 1 |
+| Red: warning and error text, over-limit bar | `#B91C1C` | on light red: 4.8 : 1; on cream: 5.8 : 1; on lighter cream: 6.2 : 1; on pink: 5.4 : 1; light cream text on it: 6.2 : 1 |
+| Red border (over-limit card) | `#DC2626` | against the cream box: 4.3 : 1 |
+| Light red (over-limit card, banner, delete confirmation) | `#FBD5D5` | main text on it: 10.9 : 1 |
+
+- The over-limit card's light red is deliberately stronger than a pale
+  pink, so it is clearly different from the creams around it, not only
+  through its red border and text.
 
 - Small changes to these exact colours are fine during the build, as long
   as every pair still meets the readability rule.
@@ -111,14 +123,15 @@ section 3).
   one: the category box first, then the Expenses box.
 
 ### Header bar
-- A full-width bar across the top with "Expense Tracker" on the left and
-  today's full date on the right, for example "Thursday, 8 October 2026"
-  (weekday, day, month name, year).
+- A full-width deep sage green bar across the top with "Expense Tracker"
+  on the left and today's full date on the right, for example
+  "Thursday, 8 October 2026" (weekday, day, month name, year). Both are
+  in light cream text.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
 
 ### Category box and its "This month" heading
-- One white box holds the heading and all six category cards. The
+- One cream box holds the heading and all six category cards. The
   loading, error, and Try again messages for the summary also appear
   inside this box.
 - The box's heading is "This month: " followed by the month name and
@@ -150,7 +163,7 @@ section 3).
 - **Over-limit card:** the card turns red: a thicker red border (2
   pixels instead of 1) and light red background, a full red progress bar,
   and the status line `Over limit by Rs X` in red bold text. It sits on
-  the white category box, not the pink page, so the red stands out
+  the cream category box, not the pink page, so the red stands out
   clearly. The warning is always in words, not just colour.
 
 ### Add expense form
@@ -180,7 +193,8 @@ section 3).
   section 4).
 
 ### Popup (edit expense)
-- A white card in the middle of the screen, over a darkened page.
+- A cream box in the middle of the screen, over a darkened page. Its
+  input fields are the lighter cream, like the add form's.
 - Title "Edit expense", the four fields (Amount, Category, Date, Note)
   stacked one per line, then **Save changes** and **Cancel**.
 - The Category box shows the expense's current category. It has no
