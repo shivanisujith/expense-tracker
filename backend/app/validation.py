@@ -10,6 +10,8 @@ from app import clock
 # categories live in the database and can be changed.
 STARTING_CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment", "Other")
 NOTE_MAX_LENGTH = 100
+CATEGORY_NAME_MAX_LENGTH = 30
+MAX_CATEGORIES = 20
 
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -86,6 +88,29 @@ def validate_limit(body) -> int:
         "invalid_limit",
         "Limit is required and must be a whole number of paise greater than 0.",
     )
+
+
+def validate_category_name(body, categories, own_id: int | None = None) -> str:
+    """Checks a name for adding (own_id None) or renaming category own_id.
+    `categories` is every current category as (id, name). Returns the
+    trimmed name. Rules 12-14 in specs/backend-spec.md."""
+    if not isinstance(body, dict):
+        raise invalid_request()
+    value = body.get("name")
+    if not isinstance(value, str) or not value.strip():
+        raise ApiError(422, "category_name_missing", "Please enter a category name.", "name")
+    name = value.strip()
+    if len(name) > CATEGORY_NAME_MAX_LENGTH:
+        raise ApiError(
+            422, "category_name_too_long", "Category name must be 30 characters or fewer.", "name"
+        )
+    for category_id, other_name in categories:
+        # casefold() is lower() that also handles letters beyond English.
+        if category_id != own_id and other_name.casefold() == name.casefold():
+            raise ApiError(
+                422, "duplicate_category", f"A category called {other_name} already exists.", "name"
+            )
+    return name
 
 
 def validate_expense(body, category_ids: dict[str, int]) -> dict:

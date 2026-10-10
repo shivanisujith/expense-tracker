@@ -9,12 +9,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import clock, db
-from app.validation import ApiError, invalid_request, validate_expense, validate_limit
+from app.validation import (
+    MAX_CATEGORIES,
+    ApiError,
+    invalid_request,
+    validate_category_name,
+    validate_expense,
+    validate_limit,
+)
 
 logger = logging.getLogger(__name__)
 
 EXPENSE_EXAMPLE = {"amount_paise": 1250, "category": "Food", "date": "2026-10-07", "note": "Lunch"}
 LIMIT_EXAMPLE = {"limit_paise": 500000}
+CATEGORY_EXAMPLE = {"name": "Pets"}
 
 
 @asynccontextmanager
@@ -224,3 +232,64 @@ def set_limit(category_id: int, body: Any = Body(None, examples=[LIMIT_EXAMPLE])
     finally:
         conn.close()
     return {"category_id": category_id, "category": category["name"], "limit_paise": limit_paise}
+
+
+def all_categories(conn) -> list[tuple[int, str]]:
+    return [(row["id"], row["name"]) for row in conn.execute("SELECT id, name FROM categories")]
+
+
+@app.post("/api/categories", status_code=201)
+def add_category(body: Any = Body(None, examples=[CATEGORY_EXAMPLE])):
+    conn = db.connect()
+    try:
+        categories = all_categories(conn)
+        name = validate_category_name(body, categories)
+        if len(categories) >= MAX_CATEGORIES:
+            raise ApiError(422, "too_many_categories", "You can have at most 20 categories.")
+        with conn:
+            cursor = conn.execute("INSERT INTO categories (name) VALUES (?)", (name,))
+    finally:
+        conn.close()
+    return {"id": cursor.lastrowid, "name": name}
+
+
+@app.put("/api/categories/{category_id}")
+def rename_category(category_id: int, body: Any = Body(None, examples=[CATEGORY_EXAMPLE])):
+    conn = db.connect()
+    try:
+        if fetch_category(conn, category_id) is None:
+            raise category_not_found()
+        name = validate_category_name(body, all_categories(conn), own_id=category_id)
+        # Expenses and the limit point to the id, so they stay with the category.
+        with conn:
+            conn.execute("UPDATE categories SET name = ? WHERE id = ?", (name, category_id))
+    finally:
+        conn.close()
+    return {"id": category_id, "name": name}
+
+
+def category_in_use(name: str, expense_count: int) -> ApiError:
+    uses = "1 expense uses" if expense_count == 1 else f"{expense_count} expenses use"
+    return ApiError(422, "category_in_use", f"Can't delete {name}: {uses} it.")
+
+
+@app.delete("/api/categories/{category_id}", status_code=204)
+def delete_category(category_id: int):
+    conn = db.connect()
+    try:
+        category = fetch_category(conn, category_id)
+        if category is None:
+            raise category_not_found()
+        if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 1:
+            raise ApiError(422, "last_category", "You must keep at least one category.")
+        expense_count = conn.execute(
+            "SELECT COUNT(*) FROM expenses WHERE category_id = ?", (category_id,)
+        ).fetchone()[0]
+        if expense_count > 0:
+            raise category_in_use(category["name"], expense_count)
+        with conn:
+            conn.execute("DELETE FROM category_limits WHERE category_id = ?", (category_id,))
+            conn.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+    finally:
+        conn.close()
+    return Response(status_code=204)
