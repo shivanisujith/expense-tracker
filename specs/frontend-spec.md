@@ -30,14 +30,16 @@ The app is **one page** laid out as a dashboard, with these parts:
 3. **Add expense form**: one horizontal row across the full width.
 4. Below the form, **two columns** side by side:
    - **Left (a bit more than half the width): one cream box** headed
-     "This month: October 2026", holding all six category cards.
+     "This month: October 2026", with a **Manage categories** button,
+     holding one card per category.
    - **Right: the Expenses box**, all expenses, newest first.
 
 On a phone, these all stack into one column in the order above: page
 title, banner, add form, category cards, expense list.
 
 Editing an expense happens in a **popup**, not in the add form (see
-section 3).
+section 3). Adding, renaming, and deleting categories happens in the
+**Manage categories popup** (see section 5).
 
 ### Money and date display
 - Money is shown in rupees with 2 decimals and Indian digit grouping, for
@@ -125,7 +127,7 @@ section 3).
 ### Page columns
 - On a laptop or wider screen (about 1000 pixels wide or more), the area
   below the add form is split into two columns:
-  - **Left:** the category box (the "This month" heading and all six
+  - **Left:** the category box (the "This month" heading and all the
     category cards), taking a bit more than half the width (about 55%).
   - **Right:** the Expenses box, taking the rest.
 - The two boxes look even: their tops line up, and they use the same
@@ -147,9 +149,13 @@ section 3).
   the backend answers or when the server can't be reached.
 
 ### Category box and its "This month" heading
-- One cream box holds the heading and all six category cards. The
+- One cream box holds the heading and one card per category. The
   loading, error, and Try again messages for the summary also appear
   inside this box.
+- A **Manage categories** button (a light button) sits at the right end
+  of the heading line. It opens the Manage categories popup. It is
+  disabled until the summary has loaded, because the summary provides
+  the list of categories.
 - The box's heading is "This month: " followed by the month name and
   year, for example "This month: October 2026", styled like the
   "Expenses" heading in the box next to it.
@@ -159,8 +165,10 @@ section 3).
   "This month".
 
 ### Category cards
-- Six cards in the fixed order: Food, Transport, Shopping, Bills,
-  Entertainment, Other.
+- One card per current category, in category order: the starting six
+  (Food, Transport, Shopping, Bills, Entertainment, Other) first, then
+  new categories in the order they were added. A renamed category keeps
+  its place.
 - **Grid:** 2 cards per row in the left column on a laptop, 2 per row on
   a tablet-sized screen, 1 per row on a phone.
 - Each card shows:
@@ -202,9 +210,18 @@ section 3).
 - The icon buttons have text labels for screen readers ("Edit expense",
   "Delete expense") and show the same words as a tooltip on hover.
 - Rows are separated by thin lines. No other decoration.
-- When the list's column is too narrow to fit everything on one line,
-  each row may wrap onto two lines (for example category and amount on
-  top, date and note below), keeping the amount and icon buttons visible.
+- **Column headings:** above the rows, small headings "Date", "Category",
+  "Note", and "Amount" in muted plum, each lined up with its column.
+  "Amount" is right-aligned like the amounts. There is no heading above
+  the icon buttons. The headings only show when there is at least one
+  expense (not while loading, on an error, or when the list is empty).
+- Rows stay on one line as long as the Expenses box is at least about
+  420 pixels wide inside, which covers almost every laptop. Long notes
+  wrap within the Note column.
+- When the box is narrower than that (phones and small windows), each row
+  wraps onto two lines (category and amount on top, date and note below),
+  keeping the amount and icon buttons visible, and the column headings
+  are hidden.
 - The delete confirmation appears inside that expense's row (see
   section 4).
 
@@ -213,10 +230,27 @@ section 3).
   input fields are the lighter cream, like the add form's.
 - Title "Edit expense", the four fields (Amount, Category, Date, Note)
   stacked one per line, then **Save changes** and **Cancel**.
-- The Category box shows the expense's current category. It has no
-  "Choose a category" option.
+- The Category box lists the current categories, in category order, and
+  shows the expense's current category. It has no "Choose a category"
+  option.
 - While the popup is open, the page behind it can't be used.
 - When it opens, the cursor goes to the Amount field.
+
+### Popup (manage categories)
+- Looks like the edit popup: a cream box in the middle of the screen,
+  over a darkened page, with lighter cream input fields.
+- Title "Manage categories", then:
+  - The list of current categories, in category order. Each row shows the
+    name and two small icon buttons: rename (pencil) and delete (bin).
+    Their screen-reader labels and tooltips name the category, for
+    example "Rename Food" and "Delete Food". If the list is too tall for
+    the screen, it scrolls inside the popup.
+  - Below the list: an "Add a category" text box with an **Add** button.
+  - At the bottom: a **Close** button.
+- When it opens, the cursor goes to the "Add a category" box.
+- Error messages are red: under the add box for adding, inside the row
+  for renaming and deleting, and at the top of the popup for messages
+  that are not about one row.
 
 ### Narrow phone screens
 - Everything stacks into **one column**, in this order: page title,
@@ -248,8 +282,9 @@ the current month (IST), and spent counts only that month's expenses.
 ### States
 - **Loading:** "Loading summary..." inside the category box, in place of
   the cards.
-- **Empty:** none. All six cards always show, with Rs 0.00 spent if
-  nothing was spent.
+- **Empty:** none. Every current category always has a card (there is
+  always at least one category), with Rs 0.00 spent if nothing was
+  spent.
 - **Error (500):** "Couldn't load the summary. Please try again." with a
   **Try again** button.
 - **Can't reach server:** the server banner shows. The cards area shows
@@ -265,11 +300,17 @@ The form is always in add mode. It is never used for editing.
 | Field    | Input                         | Default    |
 |----------|-------------------------------|------------|
 | Amount   | Text box for rupees, e.g. 12.50 | empty    |
-| Category | Drop-down of the six categories | none: shows "Choose a category" |
+| Category | Drop-down of the current categories, in category order | none: shows "Choose a category" |
 | Date     | Date picker, cannot pick a day after today | today |
 | Note     | Text box, max 100 characters  | empty      |
 
 Button: **Add expense**.
+
+- The category list comes from the summary. Until the summary has loaded,
+  the Category box offers only "Choose a category".
+- If the category chosen in the add form is renamed or deleted (in the
+  Manage categories popup), the Category box goes back to "Choose a
+  category". The rest of the form keeps what was typed.
 
 ### Frontend checks before sending
 If one fails, show its message below the form row and send nothing. The
@@ -300,7 +341,7 @@ When the checks pass, the amount is converted from rupees to whole paise
   is null. Keep everything the user typed.
 - **Server error (500):** show "Something went wrong on the server. Please
   try again." below the row. Keep everything the user typed.
-- **Can't reach server:** show the server banner (see section 5). Keep
+- **Can't reach server:** show the server banner (see section 6). Keep
   everything the user typed.
 
 ---
@@ -364,12 +405,80 @@ returns them. How each row looks is described under **Visual design**.
 
 ---
 
-## 5. Can't reach the server (goal-spec acceptance criterion 8)
+## 5. Manage categories popup
+
+How the popup looks is described under **Visual design**. The backend
+checks every rule again; the frontend checks below are for convenience.
+
+### Opening and closing
+- **Manage categories** in the category box opens the popup.
+- **Close** closes it. Pressing the Escape key does the same. Anything
+  typed but not saved (a new name, or a rename in progress) is discarded.
+- Clicking the darkened page behind the popup does **not** close it.
+- While a change is being saved, Close and Escape do nothing until the
+  answer comes back.
+
+### Frontend checks for names (adding and renaming)
+Spaces at the start and end are removed first. If a check fails, the
+message shows and nothing is sent.
+- Empty: "Please enter a category name."
+- Over 30 characters: "Category name must be 30 characters or fewer."
+- Same as another category's name, ignoring capital letters: "A category
+  called Food already exists." (using the existing category's name).
+  When renaming, the category's own name doesn't count, so changing only
+  its capitals (for example "food" to "Food") is allowed.
+- Adding when there are already 20 categories: "You can have at most 20
+  categories."
+
+### Adding
+- Type a name in "Add a category" and click **Add** (or press Enter).
+- **Saving:** Add shows "Saving..." and is disabled.
+- **Success:** the box clears, and the new category appears at the end of
+  the list and as a new card, with no limit.
+
+### Renaming
+- The **rename** icon turns that row into a text box filled with the
+  current name, with **Save** and **Cancel**. Only one row can be renamed
+  at a time; starting another rename cancels the first without saving.
+- **Saving:** Save shows "Saving..." and is disabled.
+- **Success:** the row shows the new name. Its card, the dropdowns, and
+  every expense in the list (in every month) show the new name. Its limit
+  and spent amount are unchanged.
+
+### Deleting
+- The **delete** icon asks, inside that row: "Delete Transport? This
+  can't be undone." with **Delete** and **Cancel**.
+- **Deleting:** Delete shows "Deleting..." and is disabled.
+- **Success:** the row and its card disappear, together with its limit.
+- **Refused because it is in use:** the backend's message shows in that
+  row, for example "Can't delete Food: 4 expenses use it." Nothing
+  changes.
+- **Refused because it is the last category:** "You must keep at least
+  one category." shows in that row.
+
+### States (for adding, renaming, and deleting)
+- **Refused by backend (422):** show the backend's `message` under the add
+  box or in that row. Keep what was typed.
+- **Not found (404):** show "This category no longer exists." at the top
+  of the popup, and reload the list.
+- **Server error (500):** show "Something went wrong on the server. Please
+  try again." under the add box or in that row. Keep what was typed.
+- **Can't reach server:** show "Can't reach the server. Check that the
+  backend is running, then try again." at the top of the popup, and show
+  the server banner on the page behind it. Keep what was typed.
+
+After every successful add, rename, or delete, the popup's list, the
+category cards, both category dropdowns, and the expense list reload from
+the backend.
+
+---
+
+## 6. Can't reach the server (goal-spec acceptance criterion 8)
 
 **When it applies:** any request to the backend gets no response, either
 because the connection fails or because nothing comes back within 10
-seconds. This covers loading the page, adding, editing, deleting, and
-setting limits.
+seconds. This covers loading the page, adding, editing, deleting,
+setting limits, and adding, renaming, or deleting categories.
 
 **What the user sees:**
 - A red banner at the top of the page, just below the page title:
@@ -379,8 +488,8 @@ setting limits.
 - The rest of the page still shows: page title, form, and any cards or
   list already loaded. The page is never blank or broken, and no raw
   technical error text is shown.
-- Anything the user had typed in the form, the edit popup, or a limit box
-  is kept.
+- Anything the user had typed in the form, the edit popup, a limit box,
+  or the Manage categories popup is kept.
 
 **Try again:** reloads the cards and list. If both load, the banner
 disappears. If the server still can't be reached, the banner stays.
@@ -406,9 +515,13 @@ the banner shows instead of a blank page. Start the backend, click
 5. **Set a limit.** Click **Set limit** on a category card, enter an
    amount, click **Save**. The card updates with its limit, progress bar,
    and status line.
-6. **Reload the page** at any time. Everything saved is still there,
+6. **Manage categories.** Click **Manage categories** in the category
+   box. In the popup, add a category, rename one, or delete one that no
+   expense uses. The cards, dropdowns, and expense list update. Close the
+   popup.
+7. **Reload the page** at any time. Everything saved is still there,
    because the data lives in the backend.
 
-After every successful add, edit, delete, or limit change, the frontend
-reloads both the list and the cards from the backend. It does not work
-out totals itself.
+After every successful add, edit, delete, limit change, or category
+change, the frontend reloads both the list and the cards from the
+backend. It does not work out totals itself.

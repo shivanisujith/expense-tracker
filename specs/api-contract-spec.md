@@ -26,8 +26,12 @@ in `specs/backend-spec.md`. How the frontend uses them is in
 - All bodies are JSON.
 - Money is always a whole number of paise (`1250` means Rs 12.50).
 - Dates are always text in `YYYY-MM-DD` form, like `"2026-10-07"`.
-- Category values are exactly: `"Food"`, `"Transport"`, `"Shopping"`,
-  `"Bills"`, `"Entertainment"`, `"Other"`.
+- In expenses, `category` is the category's **name**, exactly as it is
+  currently spelled, including capital letters (for example `"Food"`).
+  The current names come from the summary (endpoint 5).
+- Category endpoints (setting a limit, renaming, deleting) identify a
+  category by its **id**, a whole number that never changes, so any
+  characters in a name are safe.
 - Extra fields the frontend sends that are not listed here are ignored.
 
 ## The expense object
@@ -63,23 +67,31 @@ Every error response (404, 422, 500) uses this shape:
 - `field`: which input failed, or `null` if it isn't about one field.
 
 If more than one field is wrong, the backend reports the first one found,
-checking in this order: amount_paise, category, date, note.
+checking in this order: amount_paise, category, date, note. For category
+endpoints the order is in `specs/backend-spec.md` (rule 21).
 
 ### All error codes
 | Status | code              | field          | message                                          |
 |--------|-------------------|----------------|--------------------------------------------------|
 | 422    | invalid_amount    | amount_paise   | Amount is required and must be a whole number of paise greater than 0. |
-| 422    | invalid_category  | category       | Category must be one of: Food, Transport, Shopping, Bills, Entertainment, Other. |
+| 422    | invalid_category  | category       | Category must be one of your categories. |
 | 422    | invalid_date      | date           | Date is required and must be a real date in YYYY-MM-DD form. |
 | 422    | future_date       | date           | Date cannot be in the future.                    |
 | 422    | note_too_long     | note           | Note must be 100 characters or fewer.            |
 | 422    | invalid_limit     | limit_paise    | Limit is required and must be a whole number of paise greater than 0. |
+| 422    | category_name_missing   | name | Please enter a category name. |
+| 422    | category_name_too_long  | name | Category name must be 30 characters or fewer. |
+| 422    | duplicate_category      | name | A category called Food already exists. (uses the existing category's name, as stored) |
+| 422    | too_many_categories     | null | You can have at most 20 categories. |
+| 422    | category_in_use         | null | Can't delete Food: 4 expenses use it. (exactly one: "Can't delete Food: 1 expense uses it.") |
+| 422    | last_category           | null | You must keep at least one category. |
 | 422    | invalid_request   | null           | The request could not be read. Please try again. |
 | 404    | expense_not_found | null           | This expense no longer exists.                   |
+| 404    | category_not_found | null          | This category no longer exists.                  |
 | 500    | server_error      | null           | Something went wrong on the server. Please try again. |
 
 `invalid_request` is used when the body is not valid JSON or is not a
-JSON object.
+JSON object, or when an id in the address is not a whole number.
 
 ---
 
@@ -151,20 +163,23 @@ sent. The whole expense is replaced.
 ### 5. Category summary for the current month
 `GET /api/summary`
 
-Always returns all six categories in the fixed order. "Current month" is
-worked out in IST.
+Always returns every current category, in category order (see
+`specs/backend-spec.md`). This is also how the frontend gets the current
+list of categories for its dropdowns, cards, and the Manage categories
+popup. "Current month" is worked out in IST.
 
 **200 OK**
 ```json
 {
   "month": "2026-10",
   "categories": [
-    {"category": "Food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
-    {"category": "Transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category": "Shopping",      "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category": "Bills",         "spent_paise": 50000, "limit_paise": 40000,  "remaining_paise": -10000, "over_limit": true},
-    {"category": "Entertainment", "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category": "Other",         "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false}
+    {"category_id": 1, "category": "Food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
+    {"category_id": 2, "category": "Transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 3, "category": "Shopping",      "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 4, "category": "Bills",         "spent_paise": 50000, "limit_paise": 40000,  "remaining_paise": -10000, "over_limit": true},
+    {"category_id": 5, "category": "Entertainment", "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 6, "category": "Other",         "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 7, "category": "Pets",          "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false}
   ]
 }
 ```
@@ -175,7 +190,10 @@ worked out in IST.
 Errors: 500 only.
 
 ### 6. Set or change a category limit
-`PUT /api/limits/{category}` (for example `/api/limits/Food`)
+`PUT /api/categories/{id}/limit` (for example `/api/categories/1/limit`)
+
+This replaces the old `PUT /api/limits/{category}`, which put the
+category's name in the address.
 
 **Request body**
 ```json
@@ -184,16 +202,77 @@ Errors: 500 only.
 
 **200 OK**
 ```json
-{"category": "Food", "limit_paise": 500000}
+{"category_id": 1, "category": "Food", "limit_paise": 500000}
 ```
 
 **Errors**
-- 422 `invalid_category` if the category in the address is not one of the
-  six (for example `/api/limits/Travel`).
+- 404 `category_not_found` if no category has that id.
 - 422 `invalid_limit` or `invalid_request`.
 - 500 `server_error`.
 
-There is no endpoint to remove a limit.
+There is no endpoint to remove a limit on its own. Deleting a category
+(endpoint 9) removes its limit.
+
+### 7. Add a category
+`POST /api/categories`
+
+**Request body**
+```json
+{"name": "Pets"}
+```
+
+**201 Created**
+```json
+{"id": 7, "name": "Pets"}
+```
+The name is saved with spaces at the start and end removed. The new
+category goes at the end of the category order, with no limit.
+
+**Errors**
+- 422 `category_name_missing`, `category_name_too_long`,
+  `duplicate_category`, `too_many_categories`, or `invalid_request`.
+  Example (typing "food" when "Food" exists):
+  ```json
+  {"error": {"code": "duplicate_category", "message": "A category called Food already exists.", "field": "name"}}
+  ```
+- 500 `server_error`.
+
+### 8. Rename a category
+`PUT /api/categories/{id}` (for example `/api/categories/1`)
+
+**Request body**
+```json
+{"name": "Groceries"}
+```
+
+**200 OK**
+```json
+{"id": 1, "name": "Groceries"}
+```
+The category keeps its id, its place in the order, its expenses, and its
+limit. From now on, its expenses show the new name.
+
+**Errors**
+- 404 `category_not_found` if no category has that id.
+- 422 `category_name_missing`, `category_name_too_long`,
+  `duplicate_category`, or `invalid_request`. Renaming a category to its
+  own name with different capitals is allowed.
+- 500 `server_error`.
+
+### 9. Delete a category
+`DELETE /api/categories/{id}`
+
+**204 No Content**: deleted, together with its limit if it had one. No
+body.
+
+**Errors**
+- 404 `category_not_found` if no category has that id.
+- 422 `last_category` if it is the only category left.
+- 422 `category_in_use` if any expense, in any month, uses it. Example:
+  ```json
+  {"error": {"code": "category_in_use", "message": "Can't delete Food: 4 expenses use it.", "field": null}}
+  ```
+- 500 `server_error`.
 
 ---
 

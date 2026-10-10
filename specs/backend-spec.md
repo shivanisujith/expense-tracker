@@ -14,8 +14,27 @@ goal spec, the goal spec wins. Exact requests and responses are in
   totals are always exact.
 - **IST:** India Standard Time. "Today" and "this month" are always worked
   out in IST, not the computer's own time zone.
+- **Id:** a permanent whole number the database gives each row. It never
+  changes, even when a category is renamed.
+- **Migration:** a one-time step that converts an older database file to
+  the current format, keeping all of its data.
 
 ## Data stored
+
+### Table: categories
+One row per category.
+
+| Column | Meaning                                                          |
+|--------|------------------------------------------------------------------|
+| id     | Unique whole number, given by the database. Never reused.        |
+| name   | 1 to 30 characters, no spaces at the start or end. Unique when capital letters are ignored. |
+
+- **Category order:** by `id`, smallest first. The starting six get ids in
+  the order Food, Transport, Shopping, Bills, Entertainment, Other, so they
+  come first; new categories get larger ids, so they are added at the end.
+  Renaming does not change the id, so a renamed category keeps its place.
+- **Starting categories:** a brand-new database starts with Food,
+  Transport, Shopping, Bills, Entertainment, Other.
 
 ### Table: expenses
 One row per expense.
@@ -24,25 +43,26 @@ One row per expense.
 |--------------|------------------------------------------------------------|
 | id           | Unique whole number, given by the database. Never reused.  |
 | amount_paise | Whole number of paise, greater than 0.                     |
-| category     | One of the fixed categories (see below).                   |
+| category_id  | The `id` of the expense's category.                        |
 | date         | The day the money was spent, as YYYY-MM-DD.                |
 | note         | Short text, 0 to 100 characters. Empty text if not given.  |
 | created_at   | When the row was first saved. Used only for ordering.      |
+
+Expenses point to their category by id, not by name. Renaming a category
+only changes its name in the categories table, so its expenses go with it
+automatically. The API still sends and receives category **names** for
+expenses (see `specs/api-contract-spec.md`); the backend converts between
+names and ids.
 
 ### Table: category_limits
 At most one row per category. A category with no row has no limit.
 
 | Column      | Meaning                                         |
 |-------------|-------------------------------------------------|
-| category    | One of the fixed categories. Unique.            |
+| category_id | The `id` of the category. Unique.               |
 | limit_paise | Whole number of paise, greater than 0.          |
 
 A limit applies to every month. It is not set per month.
-
-### Fixed categories
-Food, Transport, Shopping, Bills, Entertainment, Other.
-This exact spelling and capitalisation. The list is built into the backend
-and cannot be changed through the app.
 
 ## Rules the backend enforces
 The backend checks every rule itself, whatever the frontend has already
@@ -53,9 +73,10 @@ answers with an error explaining which field failed and why.
 1. **amount_paise** is required, must be a whole number, and must be
    greater than 0. Refused: missing, empty, 0, negative, decimals such as
    12.5, text such as "1250" or "abc", true/false, and null.
-2. **category** is required and must exactly match one of the fixed
-   categories. Anything else is refused, such as "food", "Travel", or an
-   empty value.
+2. **category** is required and must exactly match the name of one of the
+   current categories, including capital letters. Anything else is
+   refused, such as "food" when the category is called "Food", the name of
+   a deleted category, or an empty value.
 3. **date** is required, must be a real calendar date in YYYY-MM-DD form,
    and must not be after today in IST. Today itself is allowed.
 4. **note** is optional. Spaces at the start and end are removed. After
@@ -67,26 +88,55 @@ answers with an error explaining which field failed and why.
    "not found" error.
 
 ### Limit rules
-7. The category must be one of the fixed categories.
+7. The limit is set for a category given by its id, which must be one of
+   the current categories. An id that doesn't exist is refused with a
+   "not found" error.
 8. **limit_paise** is required, must be a whole number, and must be greater
    than 0 (same checks as amount).
 9. Setting a limit for a category that already has one replaces the old
-   value. Limits can be changed but not removed.
+   value. Limits can be changed but not removed (except by deleting the
+   category, rule 18).
 
 ### Over-limit rule
 10. Going over a limit never blocks saving an expense.
 11. A category is **over limit** only when it has a limit and spent is
     strictly more than the limit. Spending exactly the limit is not over.
 
+### Category rules
+12. **name** (when adding or renaming) is required and must be text.
+    Spaces at the start and end are removed first. Refused: missing, null,
+    not text, or empty after removing spaces.
+13. After removing spaces, the name must be at most 30 characters.
+14. The name must not match any **other** category's name when capital
+    letters are ignored. "food" is refused when "Food" exists. Renaming a
+    category to its own name with different capitals (for example "food"
+    to "Food") is allowed, because it is the same category.
+15. There can be at most **20** categories. Adding a 21st is refused.
+16. **Renaming** changes only the name. The category's id, place in the
+    order, expenses (in every month), and limit all stay with it.
+17. **Deleting** is refused if any expense, in any month, uses the
+    category. The refusal says how many expenses use it.
+18. Deleting a category that no expense uses also deletes its limit, if it
+    has one.
+19. The **last remaining** category can't be deleted.
+20. Renaming or deleting a category id that does not exist is refused with
+    a "not found" error.
+21. Checks happen in this order, and the first failure is reported:
+    - Adding: rules 12, 13, 14, then 15.
+    - Renaming: "not found" (rule 20), then rules 12, 13, 14.
+    - Deleting: "not found" (rule 20), then rule 19, then rule 17.
+
 ## Calculations
 
 ### Expense list
-- Returns all expenses from every month.
+- Returns all expenses from every month, each with its category's
+  **current** name.
 - Ordered newest date first. If two expenses have the same date, the one
   saved later comes first.
 
 ### Category summary (current month only)
-For each of the six categories, always all six, in the fixed order above:
+For each current category, always all of them, in category order:
+- **category id and name.**
 - **spent:** the exact sum of `amount_paise` for that category's expenses
   whose date is in the current month (IST). Expenses from other months are
   never counted. 0 if there are none.
@@ -96,20 +146,51 @@ For each of the six categories, always all six, in the fixed order above:
 - **over_limit:** true or false, following rule 11. Always false when no
   limit is set.
 
-All sums use whole paise only, so they are exact.
+All sums use whole paise only, so they are exact. The summary is also how
+the frontend gets the current list of categories.
+
+## Upgrading an existing database (migration)
+Databases created before categories could be managed store each expense's
+and limit's category as one of the six fixed names, and only allow those
+six names. When the backend starts:
+
+1. **Brand-new database** (no tables yet): create the tables in the
+   current format and add the six starting categories.
+2. **Already in the current format:** do nothing.
+3. **Old format:** convert it, once:
+   1. **Back up first.** Copy the database file, unchanged, to a new file
+      next to it named `expenses.backup-before-categories-<date and
+      time>.db` (for example
+      `expenses.backup-before-categories-2026-10-10-143005.db`). If the
+      backup can't be made, stop without changing anything and report the
+      error.
+   2. Create the categories table with the six starting categories, in
+      their usual order.
+   3. Rebuild the expenses and limits tables in the current format,
+      copying every row and swapping each category name for its new id.
+      Expense ids, amounts, dates, notes, and created_at values are kept
+      exactly.
+   4. Check that the number of expenses and limits after converting
+      equals the number before. If not, undo everything and report the
+      error.
+   5. Steps 2 to 4 happen as one all-or-nothing change: if anything
+      fails, the database is left exactly as it was.
+- Backup files are `.db` files, so git ignores them like the main
+  database file.
 
 ## Errors the backend can return
 | Situation                                  | Kind of error   |
 |--------------------------------------------|-----------------|
 | Any input rule above fails                 | Validation error |
 | Expense id does not exist                  | Not found       |
+| Category id does not exist                 | Not found       |
 | Something unexpected breaks on the server  | Server error    |
 
 Every error has a short code, a plain-English message, and (for validation
-errors) the name of the field that failed. Exact shapes are in
-`specs/api-contract-spec.md`.
+errors about one field) the name of the field that failed. Exact shapes
+are in `specs/api-contract-spec.md`.
 
 ## Out of scope (from the goal spec)
-No logins or multiple users, no adding/renaming/deleting categories, no
-other currencies, no charts, no bank/UPI links, no receipts, no exports,
-no AI features.
+No logins or multiple users, no other currencies, no charts (except the
+progress bar on each category card), no bank/UPI links, no receipts, no
+exports, no AI features.
