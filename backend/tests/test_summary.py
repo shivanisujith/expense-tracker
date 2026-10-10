@@ -18,13 +18,20 @@ def add(client, **changes):
     return response.json()
 
 
+def category_id(client, name):
+    return summary_row(client, name)["category_id"]
+
+
 def set_limit(client, category, limit_paise):
-    return client.put(f"/api/limits/{category}", json={"limit_paise": limit_paise})
+    """Sets a limit by category name, looking up the category's id first."""
+    return client.put(
+        f"/api/categories/{category_id(client, category)}/limit", json={"limit_paise": limit_paise}
+    )
 
 
 # --- Summary shape ----------------------------------------------------------
 
-def test_empty_summary_lists_all_six_categories_in_order(client):
+def test_new_database_summary_lists_the_six_starting_categories_in_order(client):
     response = client.get("/api/summary")
 
     assert response.status_code == 200
@@ -32,13 +39,14 @@ def test_empty_summary_lists_all_six_categories_in_order(client):
         "month": "2026-10",
         "categories": [
             {
+                "category_id": position + 1,
                 "category": name,
                 "spent_paise": 0,
                 "limit_paise": None,
                 "remaining_paise": None,
                 "over_limit": False,
             }
-            for name in CATEGORY_ORDER
+            for position, name in enumerate(CATEGORY_ORDER)
         ],
     }
 
@@ -65,8 +73,8 @@ def test_spent_excludes_other_months(client, db_path):
     conn = sqlite3.connect(db_path)
     with conn:
         conn.execute(
-            "INSERT INTO expenses (amount_paise, category, date, note, created_at)"
-            " VALUES (8000, 'Food', '2026-11-01', '', '2026-10-07T00:00:00')"
+            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
+            " VALUES (8000, 1, '2026-11-01', '', '2026-10-07T00:00:00')"
         )
     conn.close()
 
@@ -87,7 +95,7 @@ def test_set_limit_returns_category_and_limit(client):
     response = set_limit(client, "Food", 500000)
 
     assert response.status_code == 200
-    assert response.json() == {"category": "Food", "limit_paise": 500000}
+    assert response.json() == {"category_id": 1, "category": "Food", "limit_paise": 500000}
 
 
 def test_limit_shows_in_summary_with_remaining(client):
@@ -95,6 +103,7 @@ def test_limit_shows_in_summary_with_remaining(client):
     add(client, amount_paise=1250)
 
     assert summary_row(client, "Food") == {
+        "category_id": 1,
         "category": "Food",
         "spent_paise": 1250,
         "limit_paise": 500000,
@@ -111,6 +120,7 @@ def test_expense_that_goes_over_limit_is_saved_and_flagged(client):
     assert response.status_code == 201
     assert len(client.get("/api/expenses").json()) == 1
     assert summary_row(client, "Bills") == {
+        "category_id": 4,
         "category": "Bills",
         "spent_paise": 50000,
         "limit_paise": 40000,
@@ -160,7 +170,7 @@ def test_changing_a_limit_replaces_the_old_one(client):
 
     response = set_limit(client, "Food", 20000)
 
-    assert response.json() == {"category": "Food", "limit_paise": 20000}
+    assert response.json() == {"category_id": 1, "category": "Food", "limit_paise": 20000}
     row = summary_row(client, "Food")
     assert row["limit_paise"] == 20000
     assert row["remaining_paise"] == 5000
@@ -184,18 +194,30 @@ def test_deleting_an_expense_can_clear_the_warning(client):
 
 # --- Refused limits ---------------------------------------------------------
 
-@pytest.mark.parametrize("category", ["Travel", "food", "FOOD"])
-def test_limit_for_unknown_category_is_refused(client, category):
-    response = set_limit(client, category, 10000)
+def test_limit_for_unknown_category_id_is_not_found(client):
+    response = client.put("/api/categories/999/limit", json={"limit_paise": 10000})
 
-    assert response.status_code == 422
+    assert response.status_code == 404
     assert response.json() == {
         "error": {
-            "code": "invalid_category",
-            "message": "Category must be one of: Food, Transport, Shopping, Bills, Entertainment, Other.",
-            "field": "category",
+            "code": "category_not_found",
+            "message": "This category no longer exists.",
+            "field": None,
         }
     }
+
+
+@pytest.mark.parametrize("bad_id", ["Food", "abc", "1.5"])
+def test_limit_for_id_that_is_not_a_number_is_refused(client, bad_id):
+    response = client.put(f"/api/categories/{bad_id}/limit", json={"limit_paise": 10000})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_old_limit_address_no_longer_exists(client):
+    response = client.put("/api/limits/Food", json={"limit_paise": 10000})
+    assert response.status_code in (404, 405)
 
 
 @pytest.mark.parametrize("limit", [0, -100, "abc", "10000", 12.5, True, None])
@@ -216,19 +238,19 @@ def test_bad_limit_amount_is_refused_and_nothing_changes(client, limit):
 
 
 def test_missing_limit_is_refused(client):
-    response = client.put("/api/limits/Food", json={})
+    response = client.put("/api/categories/1/limit", json={})
     assert response.json()["error"]["code"] == "invalid_limit"
 
 
 def test_unknown_category_is_reported_before_bad_limit(client):
-    response = set_limit(client, "Travel", 0)
-    assert response.json()["error"]["code"] == "invalid_category"
+    response = client.put("/api/categories/999/limit", json={"limit_paise": 0})
+    assert response.json()["error"]["code"] == "category_not_found"
 
 
 @pytest.mark.parametrize("raw_body", ["{bad", ""])
 def test_limit_with_unreadable_body_is_refused(client, raw_body):
     response = client.put(
-        "/api/limits/Food", content=raw_body, headers={"Content-Type": "application/json"}
+        "/api/categories/1/limit", content=raw_body, headers={"Content-Type": "application/json"}
     )
 
     assert response.status_code == 422
@@ -236,5 +258,5 @@ def test_limit_with_unreadable_body_is_refused(client, raw_body):
 
 
 def test_limit_body_that_is_not_an_object_is_refused(client):
-    response = client.put("/api/limits/Food", json=[10000])
+    response = client.put("/api/categories/1/limit", json=[10000])
     assert response.json()["error"]["code"] == "invalid_request"

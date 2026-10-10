@@ -6,7 +6,9 @@ from datetime import date
 
 from app import clock
 
-CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment", "Other")
+# A brand-new database starts with these, in this order. After that the
+# categories live in the database and can be changed.
+STARTING_CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment", "Other")
 NOTE_MAX_LENGTH = 100
 
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -35,15 +37,12 @@ def validate_paise(value, field: str, code: str, message: str) -> int:
     return value
 
 
-def validate_category(value) -> str:
-    if value not in CATEGORIES:
-        raise ApiError(
-            422,
-            "invalid_category",
-            "Category must be one of: Food, Transport, Shopping, Bills, Entertainment, Other.",
-            "category",
-        )
-    return value
+def validate_category(value, category_ids: dict[str, int]) -> int:
+    """`category_ids` maps each current category name to its id. Names must
+    match exactly, capitals included. Returns the category's id."""
+    if not isinstance(value, str) or value not in category_ids:
+        raise ApiError(422, "invalid_category", "Category must be one of your categories.", "category")
+    return category_ids[value]
 
 
 def validate_date(value) -> str:
@@ -89,8 +88,9 @@ def validate_limit(body) -> int:
     )
 
 
-def validate_expense(body) -> dict:
-    """Checks fields in the contract's order and raises the first error found."""
+def validate_expense(body, category_ids: dict[str, int]) -> dict:
+    """Checks fields in the contract's order and raises the first error found.
+    The result has `category_id` in place of the category name."""
     if not isinstance(body, dict):
         raise invalid_request()
     return {
@@ -100,7 +100,7 @@ def validate_expense(body) -> dict:
             "invalid_amount",
             "Amount is required and must be a whole number of paise greater than 0.",
         ),
-        "category": validate_category(body.get("category")),
+        "category_id": validate_category(body.get("category"), category_ids),
         "date": validate_date(body.get("date")),
         "note": validate_note(body.get("note")),
     }

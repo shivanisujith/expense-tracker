@@ -423,3 +423,15 @@ def test_deleted_id_is_never_reused(client):
     new = client.post("/api/expenses", json=make_expense()).json()
 
     assert new["id"] != created["id"]
+
+
+def test_unknown_category_message_does_not_list_names(client):
+    response = client.post("/api/expenses", json=make_expense(category="Travel"))
+
+    assert response.json() == {
+        "error": {
+            "code": "invalid_category",
+            "message": "Category must be one of your categories.",
+            "field": "category",
+        }
+    }

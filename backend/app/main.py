@@ -9,14 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import clock, db
-from app.validation import (
-    CATEGORIES,
-    ApiError,
-    invalid_request,
-    validate_category,
-    validate_expense,
-    validate_limit,
-)
+from app.validation import ApiError, invalid_request, validate_expense, validate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +33,7 @@ async def handle_api_error(request: Request, exc: ApiError):
 
 @app.exception_handler(RequestValidationError)
 async def handle_unreadable_request(request: Request, exc: RequestValidationError):
-    # Raised by FastAPI when the body is not valid JSON, or an expense id in
+    # Raised by FastAPI when the body is not valid JSON, or an id in
     # the address is not a whole number.
     error = invalid_request()
     return JSONResponse(status_code=error.status_code, content=error.to_body())
@@ -76,12 +69,23 @@ def expense_to_dict(row) -> dict:
     }
 
 
+# Expenses store a category id; responses show the category's current name.
+EXPENSE_WITH_CATEGORY_NAME = (
+    "SELECT e.id, e.amount_paise, c.name AS category, e.date, e.note"
+    " FROM expenses e JOIN categories c ON c.id = e.category_id"
+)
+
+
+def fetch_expense(conn, expense_id: int):
+    return conn.execute(EXPENSE_WITH_CATEGORY_NAME + " WHERE e.id = ?", (expense_id,)).fetchone()
+
+
 @app.get("/api/expenses")
 def list_expenses():
     conn = db.connect()
     try:
         rows = conn.execute(
-            "SELECT * FROM expenses ORDER BY date DESC, created_at DESC, id DESC"
+            EXPENSE_WITH_CATEGORY_NAME + " ORDER BY e.date DESC, e.created_at DESC, e.id DESC"
         ).fetchall()
     finally:
         conn.close()
@@ -90,22 +94,22 @@ def list_expenses():
 
 @app.post("/api/expenses", status_code=201)
 def add_expense(body: Any = Body(None, examples=[EXPENSE_EXAMPLE])):
-    expense = validate_expense(body)
     conn = db.connect()
     try:
+        expense = validate_expense(body, db.category_ids(conn))
         with conn:
             cursor = conn.execute(
-                "INSERT INTO expenses (amount_paise, category, date, note, created_at)"
+                "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
                 " VALUES (?, ?, ?, ?, ?)",
                 (
                     expense["amount_paise"],
-                    expense["category"],
+                    expense["category_id"],
                     expense["date"],
                     expense["note"],
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
-        row = conn.execute("SELECT * FROM expenses WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        row = fetch_expense(conn, cursor.lastrowid)
     finally:
         conn.close()
     return expense_to_dict(row)
@@ -122,20 +126,20 @@ def edit_expense(expense_id: int, body: Any = Body(None, examples=[EXPENSE_EXAMP
         # A missing expense is reported before any problem with the new values.
         if conn.execute("SELECT 1 FROM expenses WHERE id = ?", (expense_id,)).fetchone() is None:
             raise expense_not_found()
-        expense = validate_expense(body)
+        expense = validate_expense(body, db.category_ids(conn))
         with conn:
             conn.execute(
-                "UPDATE expenses SET amount_paise = ?, category = ?, date = ?, note = ?"
+                "UPDATE expenses SET amount_paise = ?, category_id = ?, date = ?, note = ?"
                 " WHERE id = ?",
                 (
                     expense["amount_paise"],
-                    expense["category"],
+                    expense["category_id"],
                     expense["date"],
                     expense["note"],
                     expense_id,
                 ),
             )
-        row = conn.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
+        row = fetch_expense(conn, expense_id)
     finally:
         conn.close()
     return expense_to_dict(row)
@@ -164,25 +168,27 @@ def get_summary():
     month = clock.today_in_ist().strftime("%Y-%m")
     conn = db.connect()
     try:
+        category_rows = conn.execute("SELECT id, name FROM categories ORDER BY id").fetchall()
         spent_rows = conn.execute(
-            "SELECT category, SUM(amount_paise) AS spent FROM expenses"
-            " WHERE substr(date, 1, 7) = ? GROUP BY category",
+            "SELECT category_id, SUM(amount_paise) AS spent FROM expenses"
+            " WHERE substr(date, 1, 7) = ? GROUP BY category_id",
             (month,),
         ).fetchall()
-        limit_rows = conn.execute("SELECT category, limit_paise FROM category_limits").fetchall()
+        limit_rows = conn.execute("SELECT category_id, limit_paise FROM category_limits").fetchall()
     finally:
         conn.close()
 
-    spent_by_category = {row["category"]: row["spent"] for row in spent_rows}
-    limit_by_category = {row["category"]: row["limit_paise"] for row in limit_rows}
+    spent_by_category = {row["category_id"]: row["spent"] for row in spent_rows}
+    limit_by_category = {row["category_id"]: row["limit_paise"] for row in limit_rows}
 
     categories = []
-    for category in CATEGORIES:
-        spent = spent_by_category.get(category, 0)
-        limit = limit_by_category.get(category)
+    for category in category_rows:
+        spent = spent_by_category.get(category["id"], 0)
+        limit = limit_by_category.get(category["id"])
         categories.append(
             {
-                "category": category,
+                "category_id": category["id"],
+                "category": category["name"],
                 "spent_paise": spent,
                 "limit_paise": limit,
                 "remaining_paise": None if limit is None else limit - spent,
@@ -192,18 +198,29 @@ def get_summary():
     return {"month": month, "categories": categories}
 
 
-@app.put("/api/limits/{category}")
-def set_limit(category: str, body: Any = Body(None, examples=[LIMIT_EXAMPLE])):
-    validate_category(category)
-    limit_paise = validate_limit(body)
+def category_not_found() -> ApiError:
+    return ApiError(404, "category_not_found", "This category no longer exists.")
+
+
+def fetch_category(conn, category_id: int):
+    return conn.execute("SELECT id, name FROM categories WHERE id = ?", (category_id,)).fetchone()
+
+
+@app.put("/api/categories/{category_id}/limit")
+def set_limit(category_id: int, body: Any = Body(None, examples=[LIMIT_EXAMPLE])):
     conn = db.connect()
     try:
+        # A missing category is reported before any problem with the limit.
+        category = fetch_category(conn, category_id)
+        if category is None:
+            raise category_not_found()
+        limit_paise = validate_limit(body)
         with conn:
             conn.execute(
-                "INSERT INTO category_limits (category, limit_paise) VALUES (?, ?)"
-                " ON CONFLICT (category) DO UPDATE SET limit_paise = excluded.limit_paise",
-                (category, limit_paise),
+                "INSERT INTO category_limits (category_id, limit_paise) VALUES (?, ?)"
+                " ON CONFLICT (category_id) DO UPDATE SET limit_paise = excluded.limit_paise",
+                (category_id, limit_paise),
             )
     finally:
         conn.close()
-    return {"category": category, "limit_paise": limit_paise}
+    return {"category_id": category_id, "category": category["name"], "limit_paise": limit_paise}
