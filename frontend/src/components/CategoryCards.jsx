@@ -10,15 +10,22 @@ import {
 } from '../money.js'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function CategoryCards({ summary, status, onRetry, onLimitSaved, onUnreachable }) {
-  const [editingCategory, setEditingCategory] = useState(null)
+function CategoryCards({ summary, status, onRetry, onLimitSaved, onManage, onUnreachable }) {
+  const [editingId, setEditingId] = useState(null)
+  // The summary provides the category list, so managing waits for it.
+  const loaded = summary !== null && status !== 'error'
 
   return (
     <section className="card category-section" aria-labelledby="categories-heading">
-      {/* The month comes with the cards, so it always matches what they count. */}
-      <h2 id="categories-heading">
-        {summary && status !== 'error' ? `This month: ${formatMonth(summary.month)}` : 'This month'}
-      </h2>
+      <div className="section-heading">
+        {/* The month comes with the cards, so it always matches what they count. */}
+        <h2 id="categories-heading">
+          {loaded ? `This month: ${formatMonth(summary.month)}` : 'This month'}
+        </h2>
+        <button type="button" className="secondary small" onClick={onManage} disabled={!loaded}>
+          Manage categories
+        </button>
+      </div>
       {status === 'error' ? (
         <div className="section-error" role="alert">
           <p>Couldn't load the summary. Please try again.</p>
@@ -32,13 +39,13 @@ function CategoryCards({ summary, status, onRetry, onLimitSaved, onUnreachable }
         <ul className="category-grid">
           {summary.categories.map((row) => (
             <CategoryCard
-              key={row.category}
+              key={row.category_id}
               row={row}
-              editing={editingCategory === row.category}
-              onEdit={() => setEditingCategory(row.category)}
-              onClose={() => setEditingCategory(null)}
+              editing={editingId === row.category_id}
+              onEdit={() => setEditingId(row.category_id)}
+              onClose={() => setEditingId(null)}
               onLimitSaved={() => {
-                setEditingCategory(null)
+                setEditingId(null)
                 onLimitSaved()
               }}
               onUnreachable={onUnreachable}
@@ -94,7 +101,7 @@ function CategoryCard({ row, editing, onEdit, onClose, onLimitSaved, onUnreachab
 
       {editing && (
         <LimitEditor
-          category={row.category}
+          categoryId={row.category_id}
           currentLimit={row.limit_paise}
           onCancel={onClose}
           onSaved={onLimitSaved}
@@ -105,11 +112,11 @@ function CategoryCard({ row, editing, onEdit, onClose, onLimitSaved, onUnreachab
   )
 }
 
-function LimitEditor({ category, currentLimit, onCancel, onSaved, onUnreachable }) {
+function LimitEditor({ categoryId, currentLimit, onCancel, onSaved, onUnreachable }) {
   const [value, setValue] = useState(currentLimit === null ? '' : paiseToRupeesText(currentLimit))
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const inputId = `limit-${category}`
+  const inputId = `limit-${categoryId}`
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -122,7 +129,7 @@ function LimitEditor({ category, currentLimit, onCancel, onSaved, onUnreachable 
     setError('')
     setSaving(true)
     try {
-      await setLimit(category, parsed.paise)
+      await setLimit(categoryId, parsed.paise)
       onSaved()
     } catch (apiError) {
       if (apiError.kind === 'unreachable') onUnreachable()

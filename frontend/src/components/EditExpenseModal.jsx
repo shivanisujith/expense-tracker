@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { editExpense } from '../api.js'
-import { CATEGORIES } from '../categories.js'
 import { todayText } from '../dates.js'
 import { FORM_FIELD, checkForm, formFromExpense } from '../expenseForm.js'
 
@@ -10,7 +9,7 @@ const UNREACHABLE_MESSAGE = "Can't reach the server. Check that the backend is r
  * The edit popup. Uses the browser's <dialog> element, which darkens the
  * page behind it, keeps focus inside, and starts on the first field.
  */
-function EditExpenseModal({ expense, onSaved, onClose, onNotFound, onUnreachable }) {
+function EditExpenseModal({ expense, categories, onSaved, onClose, onNotFound, onUnreachable }) {
   const dialogRef = useRef(null)
   const [values, setValues] = useState(() => formFromExpense(expense))
   const [fieldErrors, setFieldErrors] = useState({})
@@ -104,8 +103,8 @@ function EditExpenseModal({ expense, onSaved, onClose, onNotFound, onUnreachable
               onChange={update('category')}
               {...errorProps('category')}
             >
-              {CATEGORIES.map((name) => (
-                <option key={name}>{name}</option>
+              {categories.map((category) => (
+                <option key={category.id}>{category.name}</option>
               ))}
             </select>
           </ModalField>

@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { deleteExpense } from '../api.js'
 import { formatDate } from '../dates.js'
 import { formatRupees } from '../money.js'
+import { BinIcon, IconButton, PencilIcon } from './icons.jsx'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onUnreachable }) {
+function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onReload, onUnreachable }) {
   const [confirmingId, setConfirmingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [deleteError, setDeleteError] = useState('')
@@ -22,7 +23,7 @@ function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onUnreachab
       } else if (error.kind === 'not_found') {
         setConfirmingId(null)
         setDeleteError(error.message)
-        onDeleted(id)
+        onReload()
       } else {
         setDeleteError("Couldn't delete. Please try again.")
       }
@@ -127,52 +128,6 @@ function ExpenseItem({
         </div>
       )}
     </li>
-  )
-}
-
-// `label` is read by screen readers and shown as a tooltip on hover.
-function IconButton({ label, onClick, disabled, children }) {
-  return (
-    <button
-      type="button"
-      className="icon-button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  )
-}
-
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path
-        d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function BinIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path
-        d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }
 

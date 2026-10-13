@@ -1,15 +1,30 @@
 import { useState } from 'react'
 import { addExpense } from '../api.js'
-import { CATEGORIES } from '../categories.js'
 import { todayText } from '../dates.js'
 import { FIELD_LABELS, FORM_FIELD, checkForm, emptyForm } from '../expenseForm.js'
 
 /** The add expense form. It is always in add mode; editing uses EditExpenseModal. */
-function ExpenseForm({ onSaved, onUnreachable }) {
+function ExpenseForm({ categories, onSaved, onUnreachable }) {
   const [values, setValues] = useState(emptyForm)
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const categoryNames = categories.map((category) => category.name)
+
+  // If the chosen category is renamed or deleted, the choice is cleared (not
+  // just hidden), so a later category with the old name is never chosen by
+  // accident. React's "adjust state when a prop changes" pattern: compare
+  // with the list seen last time, during render.
+  const namesKey = categoryNames.join('\n')
+  const [seenNamesKey, setSeenNamesKey] = useState(namesKey)
+  if (namesKey !== seenNamesKey) {
+    setSeenNamesKey(namesKey)
+    if (values.category !== '' && !categoryNames.includes(values.category)) {
+      setValues({ ...values, category: '' })
+    }
+  }
+  const chosenCategory = categoryNames.includes(values.category) ? values.category : ''
 
   // Links an input to its message below the row, for screen readers.
   function errorProps(field) {
@@ -24,7 +39,7 @@ function ExpenseForm({ onSaved, onUnreachable }) {
   async function handleSubmit(event) {
     event.preventDefault()
     setFormError('')
-    const { errors, expense } = checkForm(values)
+    const { errors, expense } = checkForm({ ...values, category: chosenCategory })
     setFieldErrors(errors)
     if (!expense) return
 
@@ -65,15 +80,15 @@ function ExpenseForm({ onSaved, onUnreachable }) {
           <Field label="Category" id="category">
             <select
               id="category"
-              className={values.category === '' ? 'placeholder' : undefined}
-              value={values.category}
+              className={chosenCategory === '' ? 'placeholder' : undefined}
+              value={chosenCategory}
               onChange={update('category')}
               {...errorProps('category')}
             >
               <option value="" disabled>
                 Choose a category
               </option>
-              {CATEGORIES.map((name) => (
+              {categoryNames.map((name) => (
                 <option key={name}>{name}</option>
               ))}
             </select>

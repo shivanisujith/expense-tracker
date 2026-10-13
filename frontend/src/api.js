@@ -2,7 +2,7 @@
 // into an ApiError with one of four kinds (see specs/api-contract-spec.md):
 //   'unreachable' - no response at all, or none within 10 seconds
 //   'invalid'     - 422, the backend refused the input
-//   'not_found'   - 404, the expense no longer exists
+//   'not_found'   - 404, the expense or category no longer exists
 //   'server'      - 500 or anything else unexpected
 
 const API_BASE = 'http://localhost:8000/api'
@@ -54,5 +54,8 @@ export const addExpense = (expense) => request('POST', '/expenses', expense)
 export const editExpense = (id, expense) => request('PUT', `/expenses/${id}`, expense)
 export const deleteExpense = (id) => request('DELETE', `/expenses/${id}`)
 export const getSummary = () => request('GET', '/summary')
-export const setLimit = (category, limitPaise) =>
-  request('PUT', `/limits/${encodeURIComponent(category)}`, { limit_paise: limitPaise })
+export const setLimit = (categoryId, limitPaise) =>
+  request('PUT', `/categories/${categoryId}/limit`, { limit_paise: limitPaise })
+export const addCategory = (name) => request('POST', '/categories', { name })
+export const renameCategory = (id, name) => request('PUT', `/categories/${id}`, { name })
+export const deleteCategory = (id) => request('DELETE', `/categories/${id}`)
