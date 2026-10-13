@@ -18,6 +18,8 @@ frontend checks below are only for convenience.
   closed before the rest of the page can be used again.
 - **Icon button:** a small button showing a symbol (such as a pencil)
   instead of a word.
+- **Toast:** a short message that pops up near the bottom of the screen
+  for a few seconds, then disappears by itself.
 
 ## Screen layout
 The app is **one page** laid out as a dashboard, with these parts:
@@ -251,6 +253,15 @@ section 3). Adding, renaming, and deleting categories happens in the
 - Error messages are red: under the add box for adding, inside the row
   for renaming and deleting, and at the top of the popup for messages
   that are not about one row.
+
+### Success messages (toasts)
+- A small sage green box with light cream text (5.4 : 1, the same pair as
+  the buttons), with rounded corners and a soft shadow.
+- It appears centred near the bottom of the screen, floating above the
+  page, and is never wider than the screen.
+- It does not block anything: clicks pass through it to the page, it
+  never takes the cursor or keyboard focus, and it does not move anything
+  else on the page.
 
 ### Narrow phone screens
 - Everything stacks into **one column**, in this order: page title,
@@ -497,6 +508,36 @@ disappears. If the server still can't be reached, the banner stays.
 **Manual check:** stop the backend, open or reload the page, and confirm
 the banner shows instead of a blank page. Start the backend, click
 **Try again**, and confirm the banner disappears and the data loads.
+
+---
+
+## 7. Success messages (toasts)
+
+After every **successful** change, a toast shows one of these messages
+for about 3 seconds:
+
+| Change | Message |
+|---|---|
+| Adding an expense | Expense added |
+| Saving changes to an expense | Expense updated |
+| Deleting an expense | Expense deleted |
+| Setting or changing a limit | Limit saved |
+| Adding a category | Category added |
+| Renaming a category | Category renamed |
+| Deleting a category | Category deleted |
+
+- **Only for success.** No toast appears when a change is refused, fails,
+  or the server can't be reached; those keep showing their own messages
+  as described above. Loading or reloading data never shows a toast.
+- **One at a time.** If another change succeeds while a toast is showing,
+  the new message replaces it and the 3 seconds start again.
+- **Screen readers** announce each message politely (without interrupting
+  what is being read), using a status area that is always present on the
+  page.
+- **While the Manage categories popup is open,** the darkened page behind
+  it is hidden from screen readers, so category toasts appear and are
+  announced from inside the popup, in the same place at the bottom of the
+  screen. Closing the popup removes any toast that is still showing.
 
 ---
 
