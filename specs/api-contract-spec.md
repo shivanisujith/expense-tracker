@@ -77,11 +77,13 @@ endpoints the order is in `specs/backend-spec.md` (rule 21).
 | Status | code              | field          | message                                          |
 |--------|-------------------|----------------|--------------------------------------------------|
 | 422    | invalid_amount    | amount_paise   | Amount is required and must be a whole number of paise greater than 0. |
+| 422    | amount_too_large  | amount_paise   | Amount is too large.                             |
 | 422    | invalid_category  | category       | Category must be one of your categories. |
 | 422    | invalid_date      | date           | Date is required and must be a real date in YYYY-MM-DD form. |
 | 422    | future_date       | date           | Date cannot be in the future.                    |
 | 422    | note_too_long     | note           | Note must be 100 characters or fewer.            |
 | 422    | invalid_limit     | limit_paise    | Limit is required and must be a whole number of paise greater than 0. |
+| 422    | limit_too_large   | limit_paise    | Limit is too large.                              |
 | 422    | category_name_missing   | name | Please enter a category name. |
 | 422    | category_name_too_long  | name | Category name must be 30 characters or fewer. |
 | 422    | duplicate_category      | name | A category called Food already exists. (uses the existing category's name, as stored) |
@@ -96,7 +98,17 @@ endpoints the order is in `specs/backend-spec.md` (rule 21).
 | 500    | server_error      | null           | Something went wrong on the server. Please try again. |
 
 `invalid_request` is used when the body is not valid JSON or is not a
-JSON object, or when an id in the address is not a whole number.
+JSON object, when an id in the address is not a whole number, or when a
+note is given but is not text.
+
+Requests that send a body must say it is JSON (the
+`Content-Type: application/json` header). A body sent without it, or
+labelled as something else, is refused with `invalid_request`, even if
+its text is valid JSON.
+
+The largest allowed amount or limit is `10000000000` paise
+(Rs 10,00,00,000.00). Above that, `amount_too_large` or
+`limit_too_large` is returned.
 
 ---
 
@@ -140,8 +152,8 @@ allowed and gives `[]`.
 **201 Created**: the saved expense object, including its new `id`.
 
 **Errors**
-- 422 with `invalid_amount`, `invalid_category`, `invalid_date`,
-  `future_date`, `note_too_long`, or `invalid_request`.
+- 422 with `invalid_amount`, `amount_too_large`, `invalid_category`,
+  `invalid_date`, `future_date`, `note_too_long`, or `invalid_request`.
   Example (amount 0):
   ```json
   {"error": {"code": "invalid_amount", "message": "Amount is required and must be a whole number of paise greater than 0.", "field": "amount_paise"}}
@@ -224,7 +236,7 @@ category's name in the address.
 
 **Errors**
 - 404 `category_not_found` if no category has that id.
-- 422 `invalid_limit` or `invalid_request`.
+- 422 `invalid_limit`, `limit_too_large`, or `invalid_request`.
 - 500 `server_error`.
 
 There is no endpoint to remove a limit on its own. Deleting a category

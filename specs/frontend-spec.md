@@ -351,8 +351,13 @@ the current month (IST), and spent counts only that month's expenses.
 - Clicking **Set limit** / **Change limit** shows a small amount box and
   **Save** / **Cancel** buttons inside that card. The box is filled with
   the current limit if there is one.
-- Same amount checks as the expense form (not empty, a number, more
-  than 0, at most 2 decimals).
+- The same kind of checks as the expense form, worded for the limit:
+  - Empty: "Please enter a limit."
+  - Not a number: "Limit must be a number, like 5000.00."
+  - 0 or less: "Limit must be greater than 0."
+  - More than 2 decimal places: "Limit can have at most 2 decimal
+    places."
+  - Over Rs 10,00,00,000.00: "Limit is too large."
 - **Saving:** Save button shows "Saving..." and is disabled.
 - **Success:** the box closes and the cards reload.
 - **Refused (422) / server error (500):** show the message under the box,
@@ -400,6 +405,8 @@ same checks and messages are used in the edit popup.
 - Amount 0 or less: "Amount must be greater than 0."
 - Amount with more than 2 decimal places: "Amount can have at most 2
   decimal places."
+- Amount over Rs 10,00,00,000.00: "Amount is too large." (Exactly
+  Rs 10,00,00,000.00 is allowed.)
 - Category not chosen: "Please choose a category." (Below the row this
   reads "Category: Please choose a category.") Only the add form can
   have no category; the edit popup always has one.

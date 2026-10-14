@@ -25,11 +25,12 @@ delete ones they no longer use.
 
 ## Inputs and Outputs
 - Inputs:
-  - An expense: amount (required, greater than 0), category (required,
-    one of the current categories), date (required, not in the future),
-    and a note (optional, short text).
+  - An expense: amount (required, greater than 0, at most
+    Rs 10,00,00,000.00), category (required, one of the current
+    categories), date (required, not in the future), and a note
+    (optional, short text).
   - A category limit: one of the current categories, and a monthly limit
-    amount (greater than 0).
+    amount (greater than 0, at most Rs 10,00,00,000.00).
   - A category name, when adding or renaming a category: required, with
     spaces at the start and end removed, at most 30 characters, and not
     the same as another category's name when capital letters are ignored
@@ -144,6 +145,10 @@ delete ones they no longer use.
     the chosen month has none, and keeps the chosen month after an
     expense is added, edited, or deleted.
     -- decided by: automated test, plus a manual browser check.
+21. An amount or limit above Rs 10,00,00,000.00 is refused with a clear
+    message, and nothing is saved. Exactly Rs 10,00,00,000.00 is
+    accepted.
+    -- decided by: automated test.
 
 ## Output Files
 - backend/: the FastAPI application, database models, and tests.

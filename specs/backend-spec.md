@@ -70,9 +70,13 @@ checked. If any rule fails, nothing is saved or changed, and the backend
 answers with an error explaining which field failed and why.
 
 ### Expense rules (on add and on edit)
-1. **amount_paise** is required, must be a whole number, and must be
-   greater than 0. Refused: missing, empty, 0, negative, decimals such as
-   12.5, text such as "1250" or "abc", true/false, and null.
+1. **amount_paise** is required, must be a whole number, must be
+   greater than 0, and must be at most 10,000,000,000 paise
+   (Rs 10,00,00,000.00). Refused: missing, empty, 0, negative, decimals
+   such as 12.5, text such as "1250" or "abc", true/false, and null.
+   Exactly 10,000,000,000 is accepted; anything above it is refused as
+   too large. (This keeps every total exact, both in the database and on
+   the page.)
 2. **category** is required and must exactly match the name of one of the
    current categories, including capital letters. Anything else is
    refused, such as "food" when the category is called "Food", the name of
@@ -81,18 +85,22 @@ answers with an error explaining which field failed and why.
    and must not be after today in IST. Today itself is allowed.
 4. **note** is optional. Spaces at the start and end are removed. After
    that it must be at most 100 characters. Missing or null is saved as
-   empty text.
+   empty text. If note is given but is not text (for example a number or
+   a list), the request is refused with `invalid_request`.
 5. Editing replaces all four fields at once (amount, category, date, note),
    and the same rules apply as when adding.
 6. Editing or deleting an expense id that does not exist is refused with a
-   "not found" error.
+   "not found" error. An id in the address that is not a whole number
+   (for example `/api/expenses/abc`) is refused with `invalid_request`,
+   before any other check.
 
 ### Limit rules
 7. The limit is set for a category given by its id, which must be one of
    the current categories. An id that doesn't exist is refused with a
    "not found" error.
-8. **limit_paise** is required, must be a whole number, and must be greater
-   than 0 (same checks as amount).
+8. **limit_paise** is required, must be a whole number, must be greater
+   than 0, and must be at most 10,000,000,000 paise
+   (Rs 10,00,00,000.00) (same checks as amount).
 9. Setting a limit for a category that already has one replaces the old
    value. Limits can be changed but not removed (except by deleting the
    category, rule 18).
@@ -120,7 +128,10 @@ answers with an error explaining which field failed and why.
     has one.
 19. The **last remaining** category can't be deleted.
 20. Renaming or deleting a category id that does not exist is refused with
-    a "not found" error.
+    a "not found" error. An id in the address that is not a whole number
+    (for example `/api/categories/abc`) is refused with
+    `invalid_request`, before any other check. The same applies to
+    setting a limit.
 21. Checks happen in this order, and the first failure is reported:
     - Adding: rules 12, 13, 14, then 15.
     - Renaming: "not found" (rule 20), then rules 12, 13, 14.
