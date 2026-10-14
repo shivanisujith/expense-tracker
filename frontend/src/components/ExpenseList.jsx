@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import { deleteExpense } from '../api.js'
-import { formatDate } from '../dates.js'
+import { formatDate, formatMonth } from '../dates.js'
 import { formatRupees } from '../money.js'
+import { ALL_MONTHS } from '../months.js'
 import { BinIcon, IconButton, PencilIcon } from './icons.jsx'
 import SuccessMessage from './SuccessMessage.jsx'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
+// month: the chosen month (YYYY-MM) or ALL_MONTHS; monthChoices: the months
+// to offer, newest first. The backend filters the list for the chosen month.
 function ExpenseList({
   expenses,
   status,
+  month,
+  monthChoices,
+  onMonthChange,
   success,
   onRetry,
   onEdit,
@@ -44,7 +50,22 @@ function ExpenseList({
 
   return (
     <section className="card expense-section">
-      <h2>Expenses</h2>
+      <div className="section-heading">
+        <h2>Expenses</h2>
+        <select
+          className="month-select"
+          aria-label="Show expenses from"
+          value={month}
+          onChange={(event) => onMonthChange(event.target.value)}
+        >
+          <option value={ALL_MONTHS}>All months</option>
+          {monthChoices.map((choice) => (
+            <option key={choice} value={choice}>
+              {formatMonth(choice)}
+            </option>
+          ))}
+        </select>
+      </div>
       <SuccessMessage success={success} className="top-of-list" />
       {deleteError && (
         <p className="form-error" role="alert">
@@ -54,6 +75,7 @@ function ExpenseList({
       <ListBody
         expenses={expenses}
         status={status}
+        month={month}
         onRetry={onRetry}
         renderItem={(expense) => (
           <ExpenseItem
@@ -78,7 +100,7 @@ function ExpenseList({
   )
 }
 
-function ListBody({ expenses, status, onRetry, renderItem }) {
+function ListBody({ expenses, status, month, onRetry, renderItem }) {
   if (status === 'error') {
     return (
       <div className="section-error" role="alert">
@@ -94,6 +116,7 @@ function ListBody({ expenses, status, onRetry, renderItem }) {
     return status === 'loading' ? <p className="muted">Loading expenses...</p> : null
   }
   if (expenses.length === 0) {
+    if (month !== ALL_MONTHS) return <p className="muted">{`No expenses in ${formatMonth(month)}.`}</p>
     return <p className="muted">No expenses yet. Add your first one above.</p>
   }
   // The headings and every row share one set of columns, so they line up.

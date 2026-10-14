@@ -49,11 +49,15 @@ async function request(method, path, body) {
   throw new ApiError('server', error?.message ?? SERVER_ERROR_MESSAGE)
 }
 
-export const listExpenses = () => request('GET', '/expenses')
+/** All expenses, or only those dated in `month` (YYYY-MM) when one is given. */
+export const listExpenses = (month = null) =>
+  request('GET', month === null ? '/expenses' : `/expenses?month=${encodeURIComponent(month)}`)
 export const addExpense = (expense) => request('POST', '/expenses', expense)
 export const editExpense = (id, expense) => request('PUT', `/expenses/${id}`, expense)
 export const deleteExpense = (id) => request('DELETE', `/expenses/${id}`)
 export const getSummary = () => request('GET', '/summary')
+export const getMonths = () => request('GET', '/months')
+export const getMonthTotal = (month) => request('GET', `/months/${encodeURIComponent(month)}/total`)
 export const setLimit = (categoryId, limitPaise) =>
   request('PUT', `/categories/${categoryId}/limit`, { limit_paise: limitPaise })
 export const addCategory = (name) => request('POST', '/categories', { name })

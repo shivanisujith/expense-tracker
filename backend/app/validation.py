@@ -14,6 +14,7 @@ CATEGORY_NAME_MAX_LENGTH = 30
 MAX_CATEGORIES = 20
 
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
+_MONTH_PATTERN = re.compile(r"[0-9]{4}-(0[1-9]|1[0-2])")
 
 
 class ApiError(Exception):
@@ -77,6 +78,21 @@ def validate_note(value) -> str:
     if len(note) > NOTE_MAX_LENGTH:
         raise ApiError(422, "note_too_long", "Note must be 100 characters or fewer.", "note")
     return note
+
+
+def validate_month(value) -> str:
+    """A month as YYYY-MM (rule 22 in specs/backend-spec.md)."""
+    if not isinstance(value, str) or not _MONTH_PATTERN.fullmatch(value):
+        raise ApiError(422, "invalid_month", "Month must be a real month in YYYY-MM form.", "month")
+    return value
+
+
+def validate_past_or_current_month(value) -> str:
+    """A month as YYYY-MM that is not after the current month in IST (rule 23)."""
+    month = validate_month(value)
+    if month > clock.today_in_ist().strftime("%Y-%m"):
+        raise ApiError(422, "future_month", "Month cannot be in the future.", "month")
+    return month
 
 
 def validate_limit(body) -> int:

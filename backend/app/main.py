@@ -16,6 +16,8 @@ from app.validation import (
     validate_category_name,
     validate_expense,
     validate_limit,
+    validate_month,
+    validate_past_or_current_month,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,11 +91,16 @@ def fetch_expense(conn, expense_id: int):
 
 
 @app.get("/api/expenses")
-def list_expenses():
+def list_expenses(month: str | None = None):
+    # Without a month, every expense; with one, only those dated in it.
+    where, params = "", ()
+    if month is not None:
+        where, params = " WHERE substr(e.date, 1, 7) = ?", (validate_month(month),)
     conn = db.connect()
     try:
         rows = conn.execute(
-            EXPENSE_WITH_CATEGORY_NAME + " ORDER BY e.date DESC, e.created_at DESC, e.id DESC"
+            EXPENSE_WITH_CATEGORY_NAME + where + " ORDER BY e.date DESC, e.created_at DESC, e.id DESC",
+            params,
         ).fetchall()
     finally:
         conn.close()
@@ -171,6 +178,37 @@ def is_over_limit(spent_paise: int, limit_paise: int | None) -> bool:
     return limit_paise is not None and spent_paise > limit_paise
 
 
+def month_total(conn, month: str) -> int:
+    """Everything spent in a month, by expense date, whatever the category."""
+    return conn.execute(
+        "SELECT COALESCE(SUM(amount_paise), 0) FROM expenses WHERE substr(date, 1, 7) = ?",
+        (month,),
+    ).fetchone()[0]
+
+
+@app.get("/api/months")
+def list_months():
+    conn = db.connect()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT substr(date, 1, 7) AS month FROM expenses ORDER BY month DESC"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [row["month"] for row in rows]
+
+
+@app.get("/api/months/{month}/total")
+def get_month_total(month: str):
+    month = validate_past_or_current_month(month)
+    conn = db.connect()
+    try:
+        total_spent = month_total(conn, month)
+    finally:
+        conn.close()
+    return {"month": month, "total_spent_paise": total_spent}
+
+
 @app.get("/api/summary")
 def get_summary():
     month = clock.today_in_ist().strftime("%Y-%m")
@@ -183,11 +221,7 @@ def get_summary():
             (month,),
         ).fetchall()
         limit_rows = conn.execute("SELECT category_id, limit_paise FROM category_limits").fetchall()
-        # Summed straight from this month's expenses, whatever their category.
-        total_spent = conn.execute(
-            "SELECT COALESCE(SUM(amount_paise), 0) FROM expenses WHERE substr(date, 1, 7) = ?",
-            (month,),
-        ).fetchone()[0]
+        total_spent = month_total(conn, month)
     finally:
         conn.close()
 

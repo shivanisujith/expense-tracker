@@ -525,6 +525,39 @@ button.danger-solid:hover:not(:disabled) {
   line-height: 1.2;
 }
 
+/* The label on the left, the ‹ › arrows on the right */
+.spent-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-arrows {
+  display: flex;
+  gap: 6px;
+}
+
+.month-arrow {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Expenses box: month choice at the right of the heading */
+.month-select {
+  font: inherit;
+  font-size: 0.875rem;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
 /* Category box heading: "This month" on the left, Manage categories on the right */
 .section-heading {
   display: flex;

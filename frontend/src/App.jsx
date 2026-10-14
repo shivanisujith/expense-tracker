@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
-import { getSummary, listExpenses } from './api.js'
+import { getMonthTotal, getMonths, getSummary, listExpenses } from './api.js'
 import CategoryCards from './components/CategoryCards.jsx'
 import EditExpenseModal from './components/EditExpenseModal.jsx'
 import ExpenseForm from './components/ExpenseForm.jsx'
@@ -9,20 +9,40 @@ import ManageCategoriesModal from './components/ManageCategoriesModal.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
 import SpentThisMonth from './components/SpentThisMonth.jsx'
 import { formatFullDate } from './dates.js'
+import { ALL_MONTHS, currentMonthInIst, earliestMonth, monthOptions } from './months.js'
 import { useSuccessMessage } from './successMessage.js'
 
+function errorStatus(error) {
+  return error.kind === 'unreachable' ? 'unreachable' : 'error'
+}
+
 function statusFor(result) {
-  if (result.status === 'fulfilled') return 'loaded'
-  return result.reason.kind === 'unreachable' ? 'unreachable' : 'error'
+  return result.status === 'fulfilled' ? 'loaded' : errorStatus(result.reason)
 }
 
 function App() {
+  // Worked out once, so both month choices start here each time the page opens.
+  const [currentMonth] = useState(currentMonthInIst)
+
   // Data is null until the first successful load, and kept on screen during reloads.
   const [expenses, setExpenses] = useState(null)
   const [summary, setSummary] = useState(null)
+  const [months, setMonths] = useState(null)
   const [listStatus, setListStatus] = useState('loading')
   const [summaryStatus, setSummaryStatus] = useState('loading')
   const [unreachable, setUnreachable] = useState(false)
+
+  // The Expenses box's month choice, and the month the Spent box shows. The
+  // refs hold the latest choice, so a load that finishes after the choice
+  // has changed again is ignored.
+  const [listMonth, setListMonth] = useState(currentMonth)
+  const [spentMonth, setSpentMonth] = useState(currentMonth)
+  const listMonthRef = useRef(currentMonth)
+  const spentMonthRef = useRef(currentMonth)
+  // The total for spentMonth when it isn't the current month (the summary
+  // has the current month's).
+  const [monthTotal, setMonthTotal] = useState(null)
+  const [monthTotalStatus, setMonthTotalStatus] = useState('loaded')
   const [retrying, setRetrying] = useState(false)
 
   // The expense open in the edit popup, or null when the popup is closed.
@@ -35,16 +55,55 @@ function App() {
     ? summary.categories.map((row) => ({ id: row.category_id, name: row.category }))
     : []
 
-  // The frontend never works out totals itself: after every change it
-  // reloads both the list and the summary from the backend.
-  const loadAll = useCallback(async () => {
-    const [listResult, summaryResult] = await Promise.allSettled([listExpenses(), getSummary()])
-    if (listResult.status === 'fulfilled') setExpenses(listResult.value)
-    if (summaryResult.status === 'fulfilled') setSummary(summaryResult.value)
-    setListStatus(statusFor(listResult))
-    setSummaryStatus(statusFor(summaryResult))
-    setUnreachable([listResult, summaryResult].some((r) => statusFor(r) === 'unreachable'))
+  // Each loader returns 'loaded', 'error', 'unreachable', or 'stale' (the
+  // choice changed while it was loading, so the answer is dropped).
+  const loadList = useCallback(async (month) => {
+    try {
+      const data = await listExpenses(month === ALL_MONTHS ? null : month)
+      if (listMonthRef.current !== month) return 'stale'
+      setExpenses(data)
+      setListStatus('loaded')
+      return 'loaded'
+    } catch (error) {
+      if (listMonthRef.current !== month) return 'stale'
+      setListStatus(errorStatus(error))
+      return errorStatus(error)
+    }
   }, [])
+
+  const loadMonthTotal = useCallback(
+    async (month) => {
+      if (month === currentMonth) return 'loaded'
+      try {
+        const data = await getMonthTotal(month)
+        if (spentMonthRef.current !== month) return 'stale'
+        setMonthTotal(data)
+        setMonthTotalStatus('loaded')
+        return 'loaded'
+      } catch (error) {
+        if (spentMonthRef.current !== month) return 'stale'
+        setMonthTotalStatus(errorStatus(error))
+        return errorStatus(error)
+      }
+    },
+    [currentMonth],
+  )
+
+  // The frontend never works out totals itself: after every change it
+  // reloads the list, the summary, the months, and the shown total from the
+  // backend, keeping both month choices.
+  const loadAll = useCallback(async () => {
+    const [listResult, totalResult, [summaryResult, monthsResult]] = await Promise.all([
+      loadList(listMonthRef.current),
+      loadMonthTotal(spentMonthRef.current),
+      Promise.allSettled([getSummary(), getMonths()]),
+    ])
+    if (summaryResult.status === 'fulfilled') setSummary(summaryResult.value)
+    if (monthsResult.status === 'fulfilled') setMonths(monthsResult.value)
+    setSummaryStatus(statusFor(summaryResult))
+    const statuses = [listResult, totalResult, statusFor(summaryResult), statusFor(monthsResult)]
+    setUnreachable(statuses.includes('unreachable'))
+  }, [loadList, loadMonthTotal])
 
   useEffect(() => {
     loadAll()
@@ -59,6 +118,24 @@ function App() {
   function showUnreachable() {
     setUnreachable(true)
   }
+
+  async function chooseListMonth(month) {
+    listMonthRef.current = month
+    setListMonth(month)
+    setExpenses(null)
+    setListStatus('loading')
+    if ((await loadList(month)) === 'unreachable') showUnreachable()
+  }
+
+  async function showSpentMonth(month) {
+    spentMonthRef.current = month
+    setSpentMonth(month)
+    setMonthTotal(null)
+    setMonthTotalStatus('loading')
+    if ((await loadMonthTotal(month)) === 'unreachable') showUnreachable()
+  }
+
+  const spentIsCurrent = spentMonth === currentMonth
 
   // Each successful change shows a success message in its own box, then
   // reloads the page data.
@@ -90,7 +167,14 @@ function App() {
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
-        <SpentThisMonth summary={summary} status={summaryStatus} />
+        <SpentThisMonth
+          month={spentMonth}
+          currentMonth={currentMonth}
+          data={spentIsCurrent ? summary : monthTotal}
+          status={spentIsCurrent ? summaryStatus : monthTotalStatus}
+          earliestMonth={earliestMonth(months)}
+          onMonthChange={showSpentMonth}
+        />
         <ExpenseForm
           categories={categories}
           success={successFor('add-form')}
@@ -110,6 +194,9 @@ function App() {
           <ExpenseList
             expenses={expenses}
             status={listStatus}
+            month={listMonth}
+            monthChoices={monthOptions(months, currentMonth, listMonth)}
+            onMonthChange={chooseListMonth}
             onRetry={loadAll}
             onEdit={setEditing}
             success={successFor('expenses')}
