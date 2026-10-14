@@ -354,11 +354,46 @@ button.danger-solid:hover:not(:disabled) {
   border-top: none;
 }
 
-.expense-row {
+/* One set of columns for the headings and all rows: date, category (wraps
+   past 9rem), note (takes the rest), amount, icon buttons. Each level
+   below uses "subgrid" to share those columns, so everything lines up. */
+.expense-table {
   display: grid;
-  grid-template-columns: 110px 130px minmax(0, 1fr) auto auto;
-  gap: 4px 16px;
+  grid-template-columns: auto fit-content(9rem) minmax(0, 1fr) auto auto;
+  column-gap: 16px;
+}
+
+.expense-headings,
+.expense-table .expense-list,
+.expense-table .expense-item,
+.expense-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+.expense-headings {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.amount-heading {
+  text-align: right;
+}
+
+.expense-row {
   align-items: center;
+}
+
+.expense-category {
+  overflow-wrap: anywhere;
+}
+
+.expense-table .confirm-delete {
+  grid-column: 1 / -1;
 }
 
 .expense-date {
@@ -471,6 +506,25 @@ button.danger-solid:hover:not(:disabled) {
   margin: 0 0 10px;
 }
 
+/* Spent this month box */
+.spent-label,
+.spent-month {
+  margin: 0;
+  color: var(--muted);
+}
+
+.spent-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.spent-amount {
+  margin: 2px 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 /* Category box heading: "This month" on the left, Manage categories on the right */
 .section-heading {
   display: flex;
@@ -550,7 +604,17 @@ button.danger-solid:hover:not(:disabled) {
 
 /* Expense rows in a narrow list card: category and amount on top,
    date and note below, icons kept on the right. */
-@container (max-width: 560px) {
+@container (max-width: 420px) {
+  .expense-table,
+  .expense-table .expense-list,
+  .expense-table .expense-item {
+    display: block;
+  }
+
+  .expense-headings {
+    display: none;
+  }
+
   .expense-row {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:

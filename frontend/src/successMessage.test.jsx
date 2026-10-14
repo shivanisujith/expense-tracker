@@ -75,7 +75,11 @@ test('"Limit saved" shows only inside the card whose limit was saved', () => {
     remaining_paise: null,
     over_limit: false,
   })
-  const summary = { month: '2026-10', categories: [row(1, 'Food'), row(2, 'Transport')] }
+  const summary = {
+    month: '2026-10',
+    total_spent_paise: 0,
+    categories: [row(1, 'Food'), row(2, 'Transport')],
+  }
   const noop = () => {}
 
   render(

@@ -7,6 +7,7 @@ import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ManageCategoriesModal from './components/ManageCategoriesModal.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
+import SpentThisMonth from './components/SpentThisMonth.jsx'
 import { formatFullDate } from './dates.js'
 import { useSuccessMessage } from './successMessage.js'
 
@@ -89,6 +90,7 @@ function App() {
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
+        <SpentThisMonth summary={summary} status={summaryStatus} />
         <ExpenseForm
           categories={categories}
           success={successFor('add-form')}

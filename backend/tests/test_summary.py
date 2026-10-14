@@ -37,6 +37,7 @@ def test_new_database_summary_lists_the_six_starting_categories_in_order(client)
     assert response.status_code == 200
     assert response.json() == {
         "month": "2026-10",
+        "total_spent_paise": 0,
         "categories": [
             {
                 "category_id": position + 1,
@@ -79,6 +80,81 @@ def test_spent_excludes_other_months(client, db_path):
     conn.close()
 
     assert summary_row(client, "Food")["spent_paise"] == 1000
+
+
+def total_spent(client):
+    return client.get("/api/summary").json()["total_spent_paise"]
+
+
+def test_total_spent_equals_the_sum_of_all_categories(client):
+    """Criterion 16."""
+    add(client, amount_paise=1250, date="2026-10-01")
+    add(client, category="Bills", amount_paise=50000, date="2026-10-07")
+    add(client, category="Transport", amount_paise=1, date="2026-10-03")
+    add(client, category="Other", amount_paise=7959, date="2026-10-05")
+    client.post("/api/categories", json={"name": "Pets"})
+    add(client, category="Pets", amount_paise=800, date="2026-10-06")
+
+    categories = client.get("/api/summary").json()["categories"]
+
+    assert total_spent(client) == sum(row["spent_paise"] for row in categories)
+    assert total_spent(client) == 1250 + 50000 + 1 + 7959 + 800
+
+
+def test_total_spent_excludes_other_months(client, db_path):
+    """Criterion 16."""
+    add(client, amount_paise=1000, date="2026-10-01")
+    add(client, category="Bills", amount_paise=2500, date="2026-10-07")
+    add(client, amount_paise=2000, date="2026-09-30")  # last month
+    add(client, category="Bills", amount_paise=4000, date="2025-10-15")  # same month, last year
+    conn = sqlite3.connect(db_path)
+    with conn:
+        conn.execute(
+            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
+            " VALUES (8000, 1, '2026-11-01', '', '2026-10-07T00:00:00')"
+        )
+    conn.close()
+
+    assert total_spent(client) == 1000 + 2500
+
+
+def test_total_counts_by_expense_date_not_when_it_was_saved(client, db_path):
+    """An expense dated last month but saved this month is not this month's."""
+    add(client, amount_paise=9210, date="2026-10-02")
+    # Added through the API today (7 Oct), but dated 23 Sep.
+    add(client, amount_paise=200, date="2026-09-23")
+    # The same again, written straight into the database with an October
+    # "saved at" time, to be sure only the date matters.
+    conn = sqlite3.connect(db_path)
+    with conn:
+        conn.execute(
+            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
+            " VALUES (200, 1, '2026-09-23', '', '2026-10-13T09:00:00+00:00')"
+        )
+    conn.close()
+
+    summary = client.get("/api/summary").json()
+
+    assert summary["total_spent_paise"] == 9210
+    assert sum(row["spent_paise"] for row in summary["categories"]) == 9210
+
+
+def test_total_spent_follows_edits_and_deletes(client):
+    expense = add(client, amount_paise=1000)
+    add(client, category="Bills", amount_paise=500)
+
+    client.put(f"/api/expenses/{expense['id']}", json=make_expense(amount_paise=3000))
+    assert total_spent(client) == 3500
+
+    client.delete(f"/api/expenses/{expense['id']}")
+    assert total_spent(client) == 500
+
+
+def test_total_spent_is_exact(client):
+    add(client, amount_paise=10)
+    add(client, category="Bills", amount_paise=20)
+
+    assert total_spent(client) == 30
 
 
 def test_money_sums_stay_exact(client):

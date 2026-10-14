@@ -96,7 +96,20 @@ function ListBody({ expenses, status, onRetry, renderItem }) {
   if (expenses.length === 0) {
     return <p className="muted">No expenses yet. Add your first one above.</p>
   }
-  return <ul className="expense-list">{expenses.map(renderItem)}</ul>
+  // The headings and every row share one set of columns, so they line up.
+  // Screen readers skip the headings; each row reads naturally on its own.
+  return (
+    <div className="expense-table">
+      <div className="expense-headings" aria-hidden="true">
+        <span>Date</span>
+        <span>Category</span>
+        <span>Note</span>
+        <span className="amount-heading">Amount</span>
+        <span />
+      </div>
+      <ul className="expense-list">{expenses.map(renderItem)}</ul>
+    </div>
+  )
 }
 
 function ExpenseItem({

@@ -183,6 +183,11 @@ def get_summary():
             (month,),
         ).fetchall()
         limit_rows = conn.execute("SELECT category_id, limit_paise FROM category_limits").fetchall()
+        # Summed straight from this month's expenses, whatever their category.
+        total_spent = conn.execute(
+            "SELECT COALESCE(SUM(amount_paise), 0) FROM expenses WHERE substr(date, 1, 7) = ?",
+            (month,),
+        ).fetchone()[0]
     finally:
         conn.close()
 
@@ -203,7 +208,7 @@ def get_summary():
                 "over_limit": is_over_limit(spent, limit),
             }
         )
-    return {"month": month, "categories": categories}
+    return {"month": month, "total_spent_paise": total_spent, "categories": categories}
 
 
 def category_not_found() -> ApiError:

@@ -62,8 +62,13 @@ export function limitUsedPercent(spentPaise, limitPaise) {
 
 const rupeeGrouping = new Intl.NumberFormat('en-IN')
 
-/** Formats paise for display, e.g. 12500050 -> "Rs 1,25,000.50". */
+/**
+ * Formats paise for display, e.g. 12500050 -> "Rs 1,25,000.50". Anything
+ * that isn't a whole number of paise (missing, text, decimals) shows
+ * "Rs –", so the page never shows "NaN".
+ */
 export function formatRupees(paise) {
+  if (!Number.isSafeInteger(paise)) return 'Rs –'
   const sign = paise < 0 ? '-' : ''
   const absolute = Math.abs(paise)
   const rupees = Math.floor(absolute / 100)

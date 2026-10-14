@@ -104,3 +104,9 @@ describe('limitUsedPercent', () => {
     expect(limitUsedPercent(spent, limit)).toBeCloseTo(percent)
   })
 })
+
+describe('formatRupees never shows NaN', () => {
+  test.each([undefined, null, NaN, '9410', 94.1, Infinity])('%s is shown as "Rs –"', (value) => {
+    expect(formatRupees(value)).toBe('Rs –')
+  })
+})
