@@ -30,15 +30,18 @@ The app is **one page** laid out as a dashboard, with these parts:
    Thursday, 8 October 2026". It sits directly on the pink page, with no
    bar or box behind it.
 2. **Server banner**: hidden unless the server can't be reached.
-3. **Add expense form**: one horizontal row across the full width.
-4. Below the form, **two columns** side by side:
+3. **Spent this month box**: a highlight box showing the total spent this
+   month across all categories.
+4. **Add expense form**: one horizontal row across the full width.
+5. Below the form, **two columns** side by side:
    - **Left (a bit more than half the width): one cream box** headed
      "This month: October 2026", with a **Manage categories** button,
      holding one card per category.
    - **Right: the Expenses box**, all expenses, newest first.
 
 On a phone, these all stack into one column in the order above: page
-title, banner, add form, category cards, expense list.
+title, banner, Spent this month box, add form, category cards, expense
+list.
 
 Editing an expense happens in a **popup**, not in the add form (see
 section 3). Adding, renaming, and deleting categories happens in the
@@ -49,6 +52,9 @@ section 3). Adding, renaming, and deleting categories happens in the
   example `Rs 1,25,000.50`. The frontend converts paise to rupees for
   display only.
 - Dates are shown like `7 Oct 2026`.
+- An amount that is missing or is not a whole number of paise is shown as
+  `Rs –`. The page never shows "NaN" or any other technical text in place
+  of an amount.
 
 ---
 
@@ -120,7 +126,8 @@ section 3). Adding, renaming, and deleting categories happens in the
   example with no internet), the browser's normal system font is used and
   the page still works.
 - **Less scrolling:** the page should look like a website dashboard, not
-  a long document. On a laptop, the page title, add form, and the top of both
+  a long document. On a laptop, the page title, the Spent this month box,
+  the add form, and the top of both
   columns (category cards and expense list) should fit on the first
   screen.
 - **Use the screen width:** the page content is up to about 1400 pixels
@@ -150,6 +157,30 @@ section 3). Adding, renaming, and deleting categories happens in the
     It uses the page subtitle plum.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
+
+### Spent this month box
+- A cream box, styled like the other boxes, across the full width of the
+  page, between the page title (and the server banner, when it shows) and
+  the Add expense box. Its text is left-aligned with the boxes below.
+- Three lines:
+  - **"Spent this month"** as a small label, in the secondary muted plum.
+  - **The amount** in large, bold text in the main deep plum, for example
+    `Rs 94.10`. It is the summary's `total_spent_paise`, worked out by the
+    backend; the page never adds amounts up itself.
+  - **The month** underneath, for example "October 2026", in the
+    secondary muted plum. It comes from the summary's `month` value (IST),
+    like the category box's heading.
+- **States:**
+  - Before the summary has loaded: the label, then "Loading..." in place
+    of the amount, and no month line.
+  - If the summary can't be loaded (and nothing was loaded earlier): the
+    label, then `Rs –`, and no month line. The category box shows the
+    error message and Try again, as before.
+  - A missing or invalid total shows `Rs –`, never "NaN".
+  - Rs 0.00 when nothing has been spent this month.
+- After every successful add, edit, delete, or category change, it
+  updates together with the cards, because it comes from the same
+  summary.
 
 ### Category box and its "This month" heading
 - One cream box holds the heading and one card per category. The
@@ -270,7 +301,8 @@ section 3). Adding, renaming, and deleting categories happens in the
 
 ### Narrow phone screens
 - Everything stacks into **one column**, in this order: page title,
-  banner, add form (fields stacked one per line with a full-width
+  banner, Spent this month box, add form (fields stacked one per line
+  with a full-width
   button), the category box (one card per row), and the Expenses box
   (each row wrapping so the amount and icon buttons stay visible).
 - Nothing on the page needs sideways scrolling.
@@ -501,8 +533,8 @@ setting limits, and adding, renaming, or deleting categories.
   **"Can't reach the server. Check that the backend is running, then
   try again."**
   with a **Try again** button.
-- The rest of the page still shows: page title, form, and any cards or
-  list already loaded. The page is never blank or broken, and no raw
+- The rest of the page still shows: page title, Spent this month box,
+  form, and any cards or list already loaded. The page is never blank or broken, and no raw
   technical error text is shown.
 - Anything the user had typed in the form, the edit popup, a limit box,
   or the Manage categories popup is kept.

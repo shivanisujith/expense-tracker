@@ -146,6 +146,14 @@ For each current category, always all of them, in category order:
 - **over_limit:** true or false, following rule 11. Always false when no
   limit is set.
 
+### Total spent this month
+- **total spent:** the exact sum of `amount_paise` for **all** expenses
+  whose date is in the current month (IST), whatever their category.
+  Expenses from other months are never counted. 0 if there are none.
+- It always equals the sum of every category's **spent** above, because
+  every expense belongs to exactly one current category.
+- It is part of the summary, so the page never adds amounts up itself.
+
 All sums use whole paise only, so they are exact. The summary is also how
 the frontend gets the current list of categories.
 

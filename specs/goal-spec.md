@@ -50,6 +50,7 @@ delete ones they no longer use.
     place.
   - For each current category, for the current month: amount spent, the
     limit, and amount remaining.
+  - The total amount spent in the current month, across all categories.
   - A clear warning when a category is over its limit. Going over a limit
     does not block saving the expense.
   - A clear error message whenever an input is refused, including when a
@@ -110,6 +111,10 @@ delete ones they no longer use.
     the same amounts, dates, notes, and categories.
     -- decided by: automated test, using a database file in the old
     format.
+16. The total spent this month equals the exact sum of every category's
+    spent amount for the current month, excludes expenses from other
+    months, and is calculated by the backend, not the page.
+    -- decided by: automated test, plus a manual browser check.
 
 ## Output Files
 - backend/: the FastAPI application, database models, and tests.

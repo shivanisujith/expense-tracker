@@ -172,6 +172,7 @@ popup. "Current month" is worked out in IST.
 ```json
 {
   "month": "2026-10",
+  "total_spent_paise": 51250,
   "categories": [
     {"category_id": 1, "category": "Food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
     {"category_id": 2, "category": "Transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
@@ -186,6 +187,9 @@ popup. "Current month" is worked out in IST.
 - `limit_paise` and `remaining_paise` are `null` when no limit is set.
 - `remaining_paise` is negative when over the limit.
 - `over_limit` is true only when spent is more than the limit.
+- `total_spent_paise` is everything spent in the current month across all
+  categories, in whole paise (here 1250 + 50000 = 51250). It is 0 when
+  nothing was spent this month.
 
 Errors: 500 only.
 
