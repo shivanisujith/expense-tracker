@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { addCategory, deleteCategory, renameCategory } from '../api.js'
 import { checkCategoryName } from '../categoryNames.js'
 import { BinIcon, IconButton, PencilIcon } from './icons.jsx'
-import Toast from './Toast.jsx'
+import SuccessMessage from './SuccessMessage.jsx'
 
 const UNREACHABLE_MESSAGE = "Can't reach the server. Check that the backend is running, then try again."
 
@@ -10,10 +10,9 @@ const UNREACHABLE_MESSAGE = "Can't reach the server. Check that the backend is r
  * The Manage categories popup (specs/frontend-spec.md, section 5). Uses the
  * same <dialog> pattern as EditExpenseModal. `categories` is the current
  * list of { id, name } from the summary; `onChanged` reloads the page data.
- * Toasts show inside the popup, because the page behind it is hidden from
- * screen readers while it is open.
+ * `success` is the category success message, shown at the top of the list.
  */
-function ManageCategoriesModal({ categories, toast, onSuccess, onChanged, onClose, onUnreachable }) {
+function ManageCategoriesModal({ categories, success, onSuccess, onChanged, onClose, onUnreachable }) {
   const dialogRef = useRef(null)
   const addInputRef = useRef(null)
   const [newName, setNewName] = useState('')
@@ -130,6 +129,7 @@ function ManageCategoriesModal({ categories, toast, onSuccess, onChanged, onClos
         </p>
       )}
 
+      <SuccessMessage success={success} className="top-of-list" />
       <ul className="manage-list">
         {categories.map((category) => (
           <CategoryRow
@@ -182,7 +182,6 @@ function ManageCategoriesModal({ categories, toast, onSuccess, onChanged, onClos
           Close
         </button>
       </div>
-      <Toast toast={toast} />
     </dialog>
   )
 }

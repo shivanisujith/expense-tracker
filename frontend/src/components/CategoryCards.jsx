@@ -8,9 +8,18 @@ import {
   paiseToRupeesText,
   parseRupees,
 } from '../money.js'
+import SuccessMessage from './SuccessMessage.jsx'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function CategoryCards({ summary, status, onRetry, onLimitSaved, onManage, onUnreachable }) {
+function CategoryCards({
+  summary,
+  status,
+  success,
+  onRetry,
+  onLimitSaved,
+  onManage,
+  onUnreachable,
+}) {
   const [editingId, setEditingId] = useState(null)
   // The summary provides the category list, so managing waits for it.
   const loaded = summary !== null && status !== 'error'
@@ -42,11 +51,12 @@ function CategoryCards({ summary, status, onRetry, onLimitSaved, onManage, onUnr
               key={row.category_id}
               row={row}
               editing={editingId === row.category_id}
+              success={success?.place === `card-${row.category_id}` ? success : null}
               onEdit={() => setEditingId(row.category_id)}
               onClose={() => setEditingId(null)}
               onLimitSaved={() => {
                 setEditingId(null)
-                onLimitSaved()
+                onLimitSaved(row.category_id)
               }}
               onUnreachable={onUnreachable}
             />
@@ -57,7 +67,7 @@ function CategoryCards({ summary, status, onRetry, onLimitSaved, onManage, onUnr
   )
 }
 
-function CategoryCard({ row, editing, onEdit, onClose, onLimitSaved, onUnreachable }) {
+function CategoryCard({ row, editing, success, onEdit, onClose, onLimitSaved, onUnreachable }) {
   const hasLimit = row.limit_paise !== null
   const percent = hasLimit ? limitUsedPercent(row.spent_paise, row.limit_paise) : 0
 
@@ -98,6 +108,8 @@ function CategoryCard({ row, editing, onEdit, onClose, onLimitSaved, onUnreachab
             ? `${formatRupees(row.remaining_paise)} left`
             : 'No limit set'}
       </p>
+
+      <SuccessMessage success={success} />
 
       {editing && (
         <LimitEditor

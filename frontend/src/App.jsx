@@ -7,9 +7,8 @@ import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ManageCategoriesModal from './components/ManageCategoriesModal.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
-import Toast from './components/Toast.jsx'
 import { formatFullDate } from './dates.js'
-import { useToast } from './toast.js'
+import { useSuccessMessage } from './successMessage.js'
 
 function statusFor(result) {
   if (result.status === 'fulfilled') return 'loaded'
@@ -28,7 +27,7 @@ function App() {
   // The expense open in the edit popup, or null when the popup is closed.
   const [editing, setEditing] = useState(null)
   const [managingCategories, setManagingCategories] = useState(false)
-  const { toast, showToast, clearToast } = useToast()
+  const { success, showSuccess, clearSuccess } = useSuccessMessage()
 
   // The current categories, in order, come from the summary.
   const categories = summary
@@ -60,19 +59,25 @@ function App() {
     setUnreachable(true)
   }
 
-  // Each successful change shows a toast, then reloads the page data.
-  function succeeded(message) {
-    showToast(message)
+  // Each successful change shows a success message in its own box, then
+  // reloads the page data.
+  function succeeded(message, place) {
+    showSuccess(message, place)
     loadAll()
+  }
+
+  // The success message for one box, or null if it belongs elsewhere.
+  function successFor(place) {
+    return success?.place === place ? success : null
   }
 
   function handleEditSaved() {
     setEditing(null)
-    succeeded('Expense updated')
+    succeeded('Expense updated', 'expenses')
   }
 
   function closeManageCategories() {
-    clearToast()
+    if (success?.place === 'categories') clearSuccess()
     setManagingCategories(false)
   }
 
@@ -86,7 +91,8 @@ function App() {
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
         <ExpenseForm
           categories={categories}
-          onSaved={() => succeeded('Expense added')}
+          success={successFor('add-form')}
+          onSaved={() => succeeded('Expense added', 'add-form')}
           onUnreachable={showUnreachable}
         />
         <div className="dashboard-columns">
@@ -94,7 +100,8 @@ function App() {
             summary={summary}
             status={summaryStatus}
             onRetry={loadAll}
-            onLimitSaved={() => succeeded('Limit saved')}
+            success={success}
+            onLimitSaved={(categoryId) => succeeded('Limit saved', `card-${categoryId}`)}
             onManage={() => setManagingCategories(true)}
             onUnreachable={showUnreachable}
           />
@@ -103,7 +110,8 @@ function App() {
             status={listStatus}
             onRetry={loadAll}
             onEdit={setEditing}
-            onDeleted={() => succeeded('Expense deleted')}
+            success={successFor('expenses')}
+            onDeleted={() => succeeded('Expense deleted', 'expenses')}
             onReload={loadAll}
             onUnreachable={showUnreachable}
           />
@@ -120,13 +128,11 @@ function App() {
           onUnreachable={showUnreachable}
         />
       )}
-      {/* While the categories popup is open, its own copy shows the toast. */}
-      <Toast toast={managingCategories ? null : toast} />
       {managingCategories && (
         <ManageCategoriesModal
           categories={categories}
-          toast={toast}
-          onSuccess={showToast}
+          success={successFor('categories')}
+          onSuccess={(message) => showSuccess(message, 'categories')}
           onChanged={loadAll}
           onClose={closeManageCategories}
           onUnreachable={showUnreachable}

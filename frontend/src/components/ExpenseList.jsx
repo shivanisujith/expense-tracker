@@ -3,9 +3,19 @@ import { deleteExpense } from '../api.js'
 import { formatDate } from '../dates.js'
 import { formatRupees } from '../money.js'
 import { BinIcon, IconButton, PencilIcon } from './icons.jsx'
+import SuccessMessage from './SuccessMessage.jsx'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
-function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onReload, onUnreachable }) {
+function ExpenseList({
+  expenses,
+  status,
+  success,
+  onRetry,
+  onEdit,
+  onDeleted,
+  onReload,
+  onUnreachable,
+}) {
   const [confirmingId, setConfirmingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [deleteError, setDeleteError] = useState('')
@@ -35,6 +45,7 @@ function ExpenseList({ expenses, status, onRetry, onEdit, onDeleted, onReload, o
   return (
     <section className="card expense-section">
       <h2>Expenses</h2>
+      <SuccessMessage success={success} className="top-of-list" />
       {deleteError && (
         <p className="form-error" role="alert">
           {deleteError}

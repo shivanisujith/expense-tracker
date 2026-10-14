@@ -1,28 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export const TOAST_MS = 3000
+export const SUCCESS_MS = 3000
 
 /**
- * Holds the current success message (specs/frontend-spec.md, section 7).
- * Returns { toast, showToast, clearToast }. `toast` is null or
- * { message, key }; the key changes on every showToast, even for the same
- * message, so it is shown and announced again.
+ * Holds the one success message on the page (specs/frontend-spec.md,
+ * section 7). Returns { success, showSuccess, clearSuccess }. `success` is
+ * null or { message, place, key }. `place` says which box shows it:
+ * 'add-form', 'expenses', 'categories', or 'card-<category id>'. The key
+ * changes on every showSuccess, even for the same message, so it is shown
+ * and announced again.
  */
-export function useToast() {
-  const [toast, setToast] = useState(null)
+export function useSuccessMessage() {
+  const [success, setSuccess] = useState(null)
   const nextKey = useRef(0)
 
   useEffect(() => {
-    if (toast === null) return undefined
-    const timer = setTimeout(() => setToast(null), TOAST_MS)
+    if (success === null) return undefined
+    const timer = setTimeout(() => setSuccess(null), SUCCESS_MS)
     return () => clearTimeout(timer)
-  }, [toast])
+  }, [success])
 
-  const showToast = useCallback((message) => {
+  const showSuccess = useCallback((message, place) => {
     nextKey.current += 1
-    setToast({ message, key: nextKey.current })
+    setSuccess({ message, place, key: nextKey.current })
   }, [])
-  const clearToast = useCallback(() => setToast(null), [])
+  const clearSuccess = useCallback(() => setSuccess(null), [])
 
-  return { toast, showToast, clearToast }
+  return { success, showSuccess, clearSuccess }
 }

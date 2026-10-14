@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { addExpense } from '../api.js'
 import { todayText } from '../dates.js'
 import { FIELD_LABELS, FORM_FIELD, checkForm, emptyForm } from '../expenseForm.js'
+import SuccessMessage from './SuccessMessage.jsx'
 
 /** The add expense form. It is always in add mode; editing uses EditExpenseModal. */
-function ExpenseForm({ categories, onSaved, onUnreachable }) {
+function ExpenseForm({ categories, success, onSaved, onUnreachable }) {
   const [values, setValues] = useState(emptyForm)
   const [fieldErrors, setFieldErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -117,6 +118,7 @@ function ExpenseForm({ categories, onSaved, onUnreachable }) {
         </div>
 
         <FormMessages formError={formError} fieldErrors={fieldErrors} />
+        <SuccessMessage success={success} className="below-row" />
       </form>
     </section>
   )
