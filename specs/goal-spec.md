@@ -43,14 +43,21 @@ delete ones they no longer use.
       category. Deleting also removes the category's limit.
   - Existing expenses and limits are kept when the app is upgraded to
     support managing categories.
+  - A month (year and month, for example September 2026): to choose which
+    month's total to see, and which month's expenses to list.
 - Outputs:
-  - A list of expenses, newest first.
+  - A list of expenses, newest first: either the expenses of one chosen
+    month, or all expenses ("All months").
+  - The months that have at least one expense, newest first.
   - The current list of categories, in order: the starting six first, then
     new ones in the order they were added. A renamed category keeps its
     place.
   - For each current category, for the current month: amount spent, the
     limit, and amount remaining.
   - The total amount spent in the current month, across all categories.
+  - The total amount spent in any earlier month, across all categories,
+    so the person can look back month by month. Expenses count in the
+    month of their date, not the month they were saved.
   - A clear warning when a category is over its limit. Going over a limit
     does not block saving the expense.
   - A clear error message whenever an input is refused, including when a
@@ -114,6 +121,28 @@ delete ones they no longer use.
 16. The total spent this month equals the exact sum of every category's
     spent amount for the current month, excludes expenses from other
     months, and is calculated by the backend, not the page.
+    -- decided by: automated test, plus a manual browser check.
+17. The total for any month up to the current one equals the exact sum of
+    the expenses dated in that month (whenever they were saved), and is
+    calculated by the backend. A month in the future, or one not written
+    as a real month, is refused with a clear message.
+    -- decided by: automated test.
+18. In the Spent this month box, the arrows move back and forward one
+    month at a time and show that month's total. The box starts on the
+    current month each time the page opens, the forward arrow can't go
+    past the current month, and the back arrow can't go before the month
+    of the earliest expense.
+    -- decided by: automated test, plus a manual browser check.
+19. Choosing a month in the Expenses box lists only the expenses dated in
+    that month, newest first, and "All months" lists every expense. The
+    filtering is done by the backend, and a month not written as a real
+    month is refused with a clear message.
+    -- decided by: automated test.
+20. The Expenses box's month choice offers "All months" and every month
+    that has at least one expense, newest first. It starts on the current
+    month each time the page opens, says "No expenses in <month>." when
+    the chosen month has none, and keeps the chosen month after an
+    expense is added, edited, or deleted.
     -- decided by: automated test, plus a manual browser check.
 
 ## Output Files

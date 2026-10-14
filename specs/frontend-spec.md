@@ -31,13 +31,16 @@ The app is **one page** laid out as a dashboard, with these parts:
    bar or box behind it.
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Spent this month box**: a highlight box showing the total spent this
-   month across all categories.
+   month across all categories, with arrows to look back at earlier
+   months' totals.
 4. **Add expense form**: one horizontal row across the full width.
 5. Below the form, **two columns** side by side:
    - **Left (a bit more than half the width): one cream box** headed
      "This month: October 2026", with a **Manage categories** button,
      holding one card per category.
-   - **Right: the Expenses box**, all expenses, newest first.
+   - **Right: the Expenses box**, with a month choice next to its
+     heading. It lists the chosen month's expenses (or all of them),
+     newest first.
 
 On a phone, these all stack into one column in the order above: page
 title, banner, Spent this month box, add form, category cards, expense
@@ -52,6 +55,11 @@ section 3). Adding, renaming, and deleting categories happens in the
   example `Rs 1,25,000.50`. The frontend converts paise to rupees for
   display only.
 - Dates are shown like `7 Oct 2026`.
+- Months are shown with the full month name, like `September 2026`.
+- **The current month** for the month arrows and the month choice is
+  worked out in IST from the computer's clock, like the date under the
+  page title, so the page knows it straight away. The backend still
+  refuses any month after its own current month.
 - An amount that is missing or is not a whole number of paise is shown as
   `Rs –`. The page never shows "NaN" or any other technical text in place
   of an amount.
@@ -163,24 +171,44 @@ section 3). Adding, renaming, and deleting categories happens in the
   page, between the page title (and the server banner, when it shows) and
   the Add expense box. Its text is left-aligned with the boxes below.
 - Three lines:
-  - **"Spent this month"** as a small label, in the secondary muted plum.
+  - **The label**, small, in the secondary muted plum: "Spent this month"
+    when showing the current month, otherwise "Spent in " and the month,
+    for example "Spent in September 2026".
   - **The amount** in large, bold text in the main deep plum, for example
-    `Rs 94.10`. It is the summary's `total_spent_paise`, worked out by the
-    backend; the page never adds amounts up itself.
+    `Rs 94.10`. It is always worked out by the backend; the page never
+    adds amounts up itself. For the current month it is the summary's
+    `total_spent_paise`. For other months it comes from the month total
+    (endpoint 11 in `specs/api-contract-spec.md`).
   - **The month** underneath, for example "October 2026", in the
-    secondary muted plum. It comes from the summary's `month` value (IST),
-    like the category box's heading.
+    secondary muted plum. It is shown only for the current month. For
+    other months it is hidden, because the label already names the month.
+- **Month arrows:** two small light buttons, ‹ and ›, side by side at the
+  right of the box, level with the label. Screen-reader labels and
+  tooltips: "Previous month" and "Next month".
+  - ‹ shows the month before; › shows the month after. Months with no
+    expenses in between are not skipped: they show Rs 0.00.
+  - › is disabled on the current month, so no future month can be shown.
+  - ‹ is disabled on the month of the earliest expense (the last month
+    in the months list, endpoint 10), or earlier. It is also disabled
+    until that list has loaded, if it can't be loaded, and when there are
+    no expenses at all.
+  - Each time the page opens, the box starts on the current month. The
+    chosen month is not remembered after a reload.
+  - The arrows don't change the Expenses box's month choice or the
+    category cards, which always show the current month.
 - **States:**
-  - Before the summary has loaded: the label, then "Loading..." in place
+  - Before the total has loaded: the label, then "Loading..." in place
     of the amount, and no month line.
-  - If the summary can't be loaded (and nothing was loaded earlier): the
-    label, then `Rs –`, and no month line. The category box shows the
-    error message and Try again, as before.
+  - If the total can't be loaded (and nothing was loaded earlier for that
+    month): the label, then `Rs –`, and no month line. For the current
+    month, the category box also shows the error message and Try again,
+    as before. If the server can't be reached, the server banner
+    also shows.
   - A missing or invalid total shows `Rs –`, never "NaN".
-  - Rs 0.00 when nothing has been spent this month.
-- After every successful add, edit, delete, or category change, it
-  updates together with the cards, because it comes from the same
-  summary.
+  - Rs 0.00 when nothing has been spent in that month.
+- After every successful add, edit, delete, or category change, the
+  shown month's total and the months list reload, and the box stays on
+  the month it was showing.
 
 ### Category box and its "This month" heading
 - One cream box holds the heading and one card per category. The
@@ -238,6 +266,10 @@ section 3). Adding, renaming, and deleting categories happens in the
   in the same place below the row.
 
 ### Expense list
+- **Month choice:** a drop-down at the right end of the "Expenses"
+  heading line, styled like the other input fields (lighter cream), with
+  the screen-reader label "Show expenses from". See section 4 for how it
+  works.
 - Each expense is one clean row showing, left to right: **date**,
   **category**, **note** (blank if none), **amount** (right-aligned), and
   two small **icon buttons**: edit (pencil) and delete (bin).
@@ -431,8 +463,32 @@ message appears under its field inside the popup.
 
 ## 4. Expense list
 
-All expenses from every month, newest first, in the order the backend
-returns them. How each row looks is described under **Visual design**.
+The expenses of the chosen month, or of every month, newest first, in the
+order the backend returns them. How each row looks is described under
+**Visual design**.
+
+### Choosing a month
+- The drop-down's options, in this order:
+  - "All months".
+  - Every month that has at least one expense (from the months list,
+    endpoint 10), newest first, for example "October 2026", "September
+    2026".
+  - Two months are always offered even if they have no expenses, placed
+    in date order among the others: the **current month** (so the
+    starting choice is always there) and the **chosen month** (so it
+    stays chosen after its last expense is deleted).
+- Each time the page opens, the choice starts on the current month. It is
+  not remembered after a reload.
+- Choosing a month asks the backend for that month's expenses
+  (`GET /api/expenses?month=…`); "All months" asks for every expense. The
+  page never filters the list itself.
+- While the new list loads, "Loading expenses..." shows in place of the
+  list.
+- After an expense is added, edited, or deleted, the list reloads for the
+  **same** choice. An expense dated in another month is saved but doesn't
+  appear until that month (or "All months") is chosen.
+- The month choice doesn't change the Spent this month box or the
+  category cards.
 
 ### Deleting
 - Clicking the **delete** icon asks, inside that row: "Delete this
@@ -445,7 +501,9 @@ returns them. How each row looks is described under **Visual design**.
 
 ### States
 - **Loading:** "Loading expenses..." in place of the list.
-- **Empty:** "No expenses yet. Add your first one above."
+- **Empty (a month is chosen):** "No expenses in September 2026." (with
+  the chosen month).
+- **Empty ("All months"):** "No expenses yet. Add your first one above."
 - **Error (500):** "Couldn't load your expenses. Please try again." with a
   **Try again** button.
 - **Can't reach server:** the server banner shows. The list area shows
@@ -539,8 +597,9 @@ setting limits, and adding, renaming, or deleting categories.
 - Anything the user had typed in the form, the edit popup, a limit box,
   or the Manage categories popup is kept.
 
-**Try again:** reloads the cards and list. If both load, the banner
-disappears. If the server still can't be reached, the banner stays.
+**Try again:** reloads the cards, the list (for the chosen month), the
+months list, and the Spent this month box's total. If they all load, the
+banner disappears. If the server still can't be reached, the banner stays.
 
 **Manual check:** stop the backend, open or reload the page, and confirm
 the banner shows instead of a blank page. Start the backend, click
@@ -600,9 +659,14 @@ seconds, inside the box where the change was made:
    box. In the popup, add a category, rename one, or delete one that no
    expense uses. The cards, dropdowns, and expense list update. Close the
    popup.
-7. **Reload the page** at any time. Everything saved is still there,
-   because the data lives in the backend.
+7. **Look back at earlier months.** Click ‹ in the Spent this month box
+   to see last month's total, and › to come back. Choose a month in the
+   Expenses box to list only that month's expenses, or "All months".
+8. **Reload the page** at any time. Everything saved is still there,
+   because the data lives in the backend. The arrows and the month choice
+   start on the current month again.
 
 After every successful add, edit, delete, limit change, or category
-change, the frontend reloads both the list and the cards from the
-backend. It does not work out totals itself.
+change, the frontend reloads the list (for the chosen month), the cards,
+the months list, and the Spent this month box's total from the backend.
+It does not work out totals itself.

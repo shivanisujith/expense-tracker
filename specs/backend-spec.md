@@ -126,13 +126,37 @@ answers with an error explaining which field failed and why.
     - Renaming: "not found" (rule 20), then rules 12, 13, 14.
     - Deleting: "not found" (rule 20), then rule 19, then rule 17.
 
+### Month rules (choosing a month for the list or a total)
+22. A **month** is written as `YYYY-MM`: exactly four digits, a dash, and
+    two digits from 01 to 12, for example `2026-09`. Anything else is
+    refused as badly formatted, for example `2026-9`, `2026-13`,
+    `September`, `2026-09-01`, or an empty value.
+23. For a **month's total**, the month must not be after the current
+    month (IST). The current month itself is allowed.
+24. For the **expense list**, only rule 22 applies. A month after the
+    current one is not refused; it simply has no expenses, because no
+    expense can be dated in the future.
+
 ## Calculations
 
 ### Expense list
-- Returns all expenses from every month, each with its category's
-  **current** name.
+- Without a month: returns all expenses from every month.
+- With a month (rule 22): returns only the expenses whose **date** is in
+  that month. When they were saved doesn't matter.
+- Each expense has its category's **current** name.
 - Ordered newest date first. If two expenses have the same date, the one
   saved later comes first.
+
+### Months with expenses
+- Every month in which at least one expense is dated, each listed once,
+  newest first. Empty when there are no expenses.
+- The last one is the month of the earliest expense.
+
+### Total for a month
+- **total spent:** the exact sum of `amount_paise` for all expenses whose
+  **date** is in the chosen month, whatever their category. 0 if there
+  are none. Calculated the same way as the current month's total below,
+  so for the current month both give the same amount.
 
 ### Category summary (current month only)
 For each current category, always all of them, in category order:
@@ -189,7 +213,7 @@ six names. When the backend starts:
 ## Errors the backend can return
 | Situation                                  | Kind of error   |
 |--------------------------------------------|-----------------|
-| Any input rule above fails                 | Validation error |
+| Any input rule above fails (including a badly formatted or future month) | Validation error |
 | Expense id does not exist                  | Not found       |
 | Category id does not exist                 | Not found       |
 | Something unexpected breaks on the server  | Server error    |

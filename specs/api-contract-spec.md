@@ -26,6 +26,9 @@ in `specs/backend-spec.md`. How the frontend uses them is in
 - All bodies are JSON.
 - Money is always a whole number of paise (`1250` means Rs 12.50).
 - Dates are always text in `YYYY-MM-DD` form, like `"2026-10-07"`.
+- Months are always text in `YYYY-MM` form, like `"2026-09"`.
+- **Query parameter:** an extra setting added to the end of an address
+  after a `?`, like `/api/expenses?month=2026-09`.
 - In expenses, `category` is the category's **name**, exactly as it is
   currently spelled, including capital letters (for example `"Food"`).
   The current names come from the summary (endpoint 5).
@@ -85,6 +88,8 @@ endpoints the order is in `specs/backend-spec.md` (rule 21).
 | 422    | too_many_categories     | null | You can have at most 20 categories. |
 | 422    | category_in_use         | null | Can't delete Food: 4 expenses use it. (exactly one: "Can't delete Food: 1 expense uses it.") |
 | 422    | last_category           | null | You must keep at least one category. |
+| 422    | invalid_month     | month          | Month must be a real month in YYYY-MM form. |
+| 422    | future_month      | month          | Month cannot be in the future.                   |
 | 422    | invalid_request   | null           | The request could not be read. Please try again. |
 | 404    | expense_not_found | null           | This expense no longer exists.                   |
 | 404    | category_not_found | null          | This category no longer exists.                  |
@@ -98,10 +103,11 @@ JSON object, or when an id in the address is not a whole number.
 ## Endpoints
 
 ### 1. List expenses
-`GET /api/expenses`
+`GET /api/expenses` (all months) or `GET /api/expenses?month=2026-09`
+(one month)
 
-Returns all expenses, newest date first. Same date: most recently saved
-first.
+Returns all expenses, or with `month` only the expenses whose date is in
+that month. Newest date first. Same date: most recently saved first.
 
 **200 OK**
 ```json
@@ -111,9 +117,16 @@ first.
   {"id": 3, "amount_paise": 9900, "category": "Shopping", "date": "2026-09-28", "note": "Socks"}
 ]
 ```
-No expenses: `[]`.
+No expenses (in that month): `[]`. A month after the current one is
+allowed and gives `[]`.
 
-Errors: 500 only.
+**Errors**
+- 422 `invalid_month` if `month` is given but is not a real month in
+  `YYYY-MM` form (including `?month=` with nothing after it). Example:
+  ```json
+  {"error": {"code": "invalid_month", "message": "Month must be a real month in YYYY-MM form.", "field": "month"}}
+  ```
+- 500 `server_error`.
 
 ### 2. Add an expense
 `POST /api/expenses`
@@ -275,6 +288,42 @@ body.
 - 422 `category_in_use` if any expense, in any month, uses it. Example:
   ```json
   {"error": {"code": "category_in_use", "message": "Can't delete Food: 4 expenses use it.", "field": null}}
+  ```
+- 500 `server_error`.
+
+### 10. Months with expenses
+`GET /api/months`
+
+Every month in which at least one expense is dated, once each, newest
+first. The last one is the month of the earliest expense.
+
+**200 OK**
+```json
+["2026-10", "2026-09", "2026-07"]
+```
+No expenses: `[]`.
+
+Errors: 500 only.
+
+### 11. Total for one month
+`GET /api/months/{month}/total` (for example `/api/months/2026-09/total`)
+
+The total spent in that month across all categories, counting expenses by
+their date. Works for the current month and any earlier month.
+
+**200 OK**
+```json
+{"month": "2026-09", "total_spent_paise": 9210}
+```
+`total_spent_paise` is 0 when nothing was spent that month. For the
+current month it equals the summary's `total_spent_paise`.
+
+**Errors**
+- 422 `invalid_month` if the month is not a real month in `YYYY-MM` form.
+- 422 `future_month` if the month is after the current month (IST).
+  Example:
+  ```json
+  {"error": {"code": "future_month", "message": "Month cannot be in the future.", "field": "month"}}
   ```
 - 500 `server_error`.
 
