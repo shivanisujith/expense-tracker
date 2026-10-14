@@ -45,6 +45,18 @@ describe('parseRupees', () => {
   test('an amount too large to store exactly is refused', () => {
     expect(parseRupees('999999999999999999')).toEqual({ error: 'Amount is too large.' })
   })
+
+  test('exactly Rs 10,00,00,000.00 is allowed', () => {
+    expect(parseRupees('100000000')).toEqual({ paise: 10_000_000_000 })
+    expect(parseRupees('100000000.00')).toEqual({ paise: 10_000_000_000 })
+  })
+
+  test.each(['100000000.01', '100000001', '999999999.99', '1000000000'])(
+    '"%s" is over Rs 10,00,00,000.00 and too large',
+    (text) => {
+      expect(parseRupees(text)).toEqual({ error: 'Amount is too large.' })
+    },
+  )
 })
 
 describe('formatRupees', () => {
@@ -84,12 +96,17 @@ describe('parseRupees for a limit', () => {
     ['-100', 'Limit must be greater than 0.'],
     ['12.345', 'Limit can have at most 2 decimal places.'],
     ['999999999999999999', 'Limit is too large.'],
+    ['100000000.01', 'Limit is too large.'],
   ])('"%s" gives "%s"', (text, message) => {
     expect(parseRupees(text, LIMIT_MESSAGES)).toEqual({ error: message })
   })
 
   test('a valid limit becomes paise', () => {
     expect(parseRupees('5000', LIMIT_MESSAGES)).toEqual({ paise: 500000 })
+  })
+
+  test('a limit of exactly Rs 10,00,00,000.00 is allowed', () => {
+    expect(parseRupees('100000000', LIMIT_MESSAGES)).toEqual({ paise: 10_000_000_000 })
   })
 })
 

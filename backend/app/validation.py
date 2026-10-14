@@ -12,6 +12,8 @@ STARTING_CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment"
 NOTE_MAX_LENGTH = 100
 CATEGORY_NAME_MAX_LENGTH = 30
 MAX_CATEGORIES = 20
+# Rs 10,00,00,000.00. Keeps every total exact, in SQLite and in the browser.
+MAX_PAISE = 10_000_000_000
 
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 _MONTH_PATTERN = re.compile(r"[0-9]{4}-(0[1-9]|1[0-2])")
@@ -33,10 +35,13 @@ def invalid_request() -> ApiError:
     return ApiError(422, "invalid_request", "The request could not be read. Please try again.")
 
 
-def validate_paise(value, field: str, code: str, message: str) -> int:
+def validate_paise(value, field: str, code: str, message: str, too_large: tuple[str, str]) -> int:
+    """`too_large` is the (code, message) for a value above MAX_PAISE."""
     # type() rather than isinstance(): True/False count as ints in Python.
     if type(value) is not int or value <= 0:
         raise ApiError(422, code, message, field)
+    if value > MAX_PAISE:
+        raise ApiError(422, *too_large, field)
     return value
 
 
@@ -103,6 +108,7 @@ def validate_limit(body) -> int:
         "limit_paise",
         "invalid_limit",
         "Limit is required and must be a whole number of paise greater than 0.",
+        ("limit_too_large", "Limit is too large."),
     )
 
 
@@ -140,6 +146,7 @@ def validate_expense(body, category_ids: dict[str, int]) -> dict:
             "amount_paise",
             "invalid_amount",
             "Amount is required and must be a whole number of paise greater than 0.",
+            ("amount_too_large", "Amount is too large."),
         ),
         "category_id": validate_category(body.get("category"), category_ids),
         "date": validate_date(body.get("date")),

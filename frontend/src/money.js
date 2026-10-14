@@ -3,6 +3,9 @@
 
 const NUMBER_PATTERN = /^-?(\d+)(?:\.(\d+))?$/
 
+/** The largest amount or limit, Rs 10,00,00,000.00, as the backend allows. */
+export const MAX_PAISE = 10_000_000_000
+
 export const AMOUNT_MESSAGES = {
   empty: 'Please enter an amount.',
   notNumber: 'Amount must be a number, like 12.50.',
@@ -43,8 +46,9 @@ export function parseRupees(text, messages = AMOUNT_MESSAGES) {
     return { error: messages.tooManyDecimals }
   }
 
+  // Anything far too long for an exact number is also over the maximum.
   const paise = Number(whole) * 100 + Number(decimals.padEnd(2, '0'))
-  if (!Number.isSafeInteger(paise)) {
+  if (paise > MAX_PAISE) {
     return { error: messages.tooLarge }
   }
   return { paise }
