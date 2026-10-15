@@ -1,6 +1,6 @@
-# Runs every backend and frontend test on every push and pull request
-# (goal-spec criterion 22). Render deploys the backend only after these
-# checks pass; the frontend deploy job is added in Phase D6.
+# Runs every backend and frontend test on every push and pull request, and
+# deploys the frontend to GitHub Pages only when they all pass (goal-spec
+# criterion 22). Render deploys the backend only after these checks pass.
 name: CI
 
 on:
@@ -77,3 +77,50 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  deploy-frontend:
+    name: Deploy frontend to GitHub Pages
+    # Only after every test job has passed, and only for pushes to main.
+    needs: [backend-sqlite, backend-postgres, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Never two deploys at once; a newer one waits for the older to finish.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # The Render address, from the repository variable (not a secret).
+      VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+    steps:
+      - name: Check the backend address is set
+        # Runs before checkout, so not inside frontend/.
+        working-directory: .
+        run: |
+          if [ -z "$VITE_API_BASE" ]; then
+            echo "::error::Set the repository variable VITE_API_BASE to the Render address + /api"
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: frontend/dist
+      - id: deployment
+        uses: actions/deploy-pages@v5
