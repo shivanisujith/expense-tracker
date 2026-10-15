@@ -12,6 +12,11 @@ import { formatFullDate } from './dates.js'
 import { ALL_MONTHS, currentMonthInIst, earliestMonth, monthOptions } from './months.js'
 import { useSuccessMessage } from './successMessage.js'
 
+// The free online backend sleeps and takes about a minute to wake, so a
+// slow first load gets a calm note (specs/frontend-spec.md, "Page title").
+const WAKING_NOTE_DELAY_MS = 5000
+const WAKING_NOTE = 'Waking up the server, this can take up to a minute...'
+
 function errorStatus(error) {
   return error.kind === 'unreachable' ? 'unreachable' : 'error'
 }
@@ -31,6 +36,8 @@ function App() {
   const [listStatus, setListStatus] = useState('loading')
   const [summaryStatus, setSummaryStatus] = useState('loading')
   const [unreachable, setUnreachable] = useState(false)
+  // True only while the page's first load is taking more than 5 seconds.
+  const [waking, setWaking] = useState(false)
 
   // The Expenses box's month choice, and the month the Spent box shows. The
   // refs hold the latest choice, so a load that finishes after the choice
@@ -106,7 +113,16 @@ function App() {
   }, [loadList, loadMonthTotal])
 
   useEffect(() => {
-    loadAll()
+    let firstLoadDone = false
+    const timer = setTimeout(() => {
+      if (!firstLoadDone) setWaking(true)
+    }, WAKING_NOTE_DELAY_MS)
+    loadAll().finally(() => {
+      firstLoadDone = true
+      clearTimeout(timer)
+      setWaking(false)
+    })
+    return () => clearTimeout(timer)
   }, [loadAll])
 
   async function retry() {
@@ -164,6 +180,10 @@ function App() {
       <header className="page-title">
         <h1>Expense Tracker</h1>
         <p className="page-subtitle">{`Hi there, here's your spending · ${formatFullDate()}`}</p>
+        {/* Always present, so screen readers announce the note when it appears. */}
+        <p className="waking-note" role="status" aria-live="polite" aria-label="Server status">
+          {waking ? WAKING_NOTE : ''}
+        </p>
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}

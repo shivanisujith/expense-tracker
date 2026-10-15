@@ -52,6 +52,18 @@ body {
   color: var(--subtitle);
 }
 
+/* "Waking up the server..." under the subtitle. Muted, not red: nothing
+   has gone wrong. Takes no space while empty. */
+.waking-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.waking-note:not(:empty) {
+  margin-top: 4px;
+}
+
 /* Page */
 .app {
   max-width: 1400px;

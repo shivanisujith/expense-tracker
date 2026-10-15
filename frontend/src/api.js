@@ -1,12 +1,16 @@
 // Every call to the backend goes through request(), which turns any failure
 // into an ApiError with one of four kinds (see specs/api-contract-spec.md):
-//   'unreachable' - no response at all, or none within 10 seconds
+//   'unreachable' - no response at all, or none within 90 seconds
 //   'invalid'     - 422, the backend refused the input
 //   'not_found'   - 404, the expense or category no longer exists
 //   'server'      - 500 or anything else unexpected
 
-const API_BASE = 'http://localhost:8000/api'
-const TIMEOUT_MS = 10_000
+// The backend's address is a build setting: GitHub Actions sets
+// VITE_API_BASE to the Render address for the online build. Without it
+// (npm run dev, tests), the laptop backend is used.
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
+// Long enough for the free online backend to wake up (about a minute).
+const TIMEOUT_MS = 90_000
 
 const SERVER_ERROR_MESSAGE = 'Something went wrong on the server. Please try again.'
 
