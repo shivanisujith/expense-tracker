@@ -39,13 +39,13 @@ The app is **one page** laid out as a dashboard, with these parts:
 1. **Page title**: "Expense Tracker", with a greeting and today's full
    date underneath, for example "Hi there, here's your spending ·
    Thursday, 8 October 2026". It sits directly on the pink page, with no
-   bar or box behind it.
+   bar or box behind it. A **+ Add expense** button sits at the right end
+   of this title row.
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Spent this month box**: a highlight box showing the total spent this
-   month across all categories, with arrows to look back at earlier
-   months' totals.
-4. **Add expense form**: one horizontal row across the full width.
-5. Below the form, **two columns** side by side:
+   month across all categories, a short insight line, and arrows to look
+   back at earlier months' totals.
+4. Below that box, **two columns** side by side:
    - **Left (a bit more than half the width): one cream box** headed
      "This month: October 2026", with a **Manage categories** button,
      holding one card per category.
@@ -54,18 +54,20 @@ The app is **one page** laid out as a dashboard, with these parts:
      newest first.
 
 On a phone, these all stack into one column in the order above: page
-title, banner, Spent this month box, add form, category cards, expense
-list.
+title (with the + Add expense button), banner, Spent this month box,
+category cards, expense list.
 
-Editing an expense happens in a **popup**, not in the add form (see
-section 3). Adding, renaming, and deleting categories happens in the
-**Manage categories popup** (see section 5).
+Adding an expense happens in the **Add expense popup** (see section 2),
+and editing one in the **Edit expense popup** (see section 3). Adding,
+renaming, and deleting categories happens in the **Manage categories
+popup** (see section 5).
 
 ### Money and date display
 - Money is shown in rupees with 2 decimals and Indian digit grouping, for
   example `Rs 1,25,000.50`. The frontend converts paise to rupees for
   display only.
-- Dates are shown like `7 Oct 2026`.
+- Dates are shown like `7 Oct 2026`, except in expense rows, which use
+  "Today", "Yesterday", or a short date (see "Expense list").
 - Months are shown with the full month name, like `September 2026`.
 - **The current month** for the month arrows and the month choice is
   worked out in IST from the computer's clock, like the date under the
@@ -86,18 +88,22 @@ section 3). Adding, renaming, and deleting categories happens in the
 - **No header bar:** the page title sits directly on the pink page, with
   no bar or box behind it.
 - **Boxes:** soft cream, with rounded corners and a thin border so they
-  stand out from the pink page. The add form, the category box, the
-  Expenses box, and the edit popup are cream boxes.
+  stand out from the pink page. The Spent this month box, the category
+  box, the Expenses box, and the popups are cream boxes.
 - **Category cards and input fields:** a slightly lighter cream than the
   boxes, with a thin border, so they still stand out inside the boxes.
   Light (secondary) buttons, such as Cancel and Set limit, use the same
   lighter cream.
 - **Accent colour:** sage green, used for buttons, links, and progress
-  bars. No other accent colours. Buttons use a deep sage so the light
-  cream text on them is easy to read.
+  bars. No other accent colours, with one exception: the **category icon
+  circles** use three soft tints taken from the existing palette (light
+  sage, soft pink, and warm beige), each with its own darker icon colour
+  (see "Category icons" and the table below). Buttons use a deep sage so
+  the light cream text on them is easy to read.
 - **Red:** used **only** for over-limit warnings and error messages
   (including the server banner and the delete confirmation). Nothing else
-  is red.
+  is red. Category icons are never red, so red always means "over limit"
+  or "error".
 - **Text colours:** deep plum shades that match the pink page, instead of
   near-black and grey:
   - **Main text** (titles, headings, amounts, category names): deep plum.
@@ -116,6 +122,8 @@ section 3). Adding, renaming, and deleting categories happens in the
   - At least **4.5 : 1** for text, including text on buttons.
   - At least **3 : 1** for progress bars and borders that carry meaning
     (such as the over-limit border).
+  - Category icons are decorative, but each icon colour still meets
+    **4.5 : 1** against its own circle.
 - **Palette:** these colours meet that rule (contrast measured against the
   colour each is used on):
 
@@ -134,6 +142,9 @@ section 3). Adding, renaming, and deleting categories happens in the
 | Red: warning and error text, over-limit bar | `#B91C1C` | on light red: 4.8 : 1; on cream: 5.8 : 1; on lighter cream: 6.2 : 1; on pink: 5.4 : 1; light cream text on it: 6.2 : 1 |
 | Red border (over-limit card) | `#DC2626` | against the cream box: 4.3 : 1 |
 | Light red (over-limit card, banner, delete confirmation) | `#FBD5D5` | see the text colours above |
+| Icon circle: light sage, with a deep sage icon `#4F6F52` | `#E3EAE0` | sage icon on it: 4.6 : 1 |
+| Icon circle: soft pink, with a plum icon `#553047` | `#F6DCE6` | plum icon on it: 8.6 : 1 |
+| Icon circle: warm beige, with a dark brown icon | `#EFE3CF` | dark brown `#5C4033` on it: 7.4 : 1 |
 
 - The over-limit card's light red is deliberately stronger than a pale
   pink, so it is clearly different from the creams around it, not only
@@ -144,18 +155,17 @@ section 3). Adding, renaming, and deleting categories happens in the
 - **Font:** Inter, loaded from Google Fonts. If it can't load (for
   example with no internet), the browser's normal system font is used and
   the page still works.
-- **Less scrolling:** the page should look like a website dashboard, not
-  a long document. On a laptop, the page title, the Spent this month box,
-  the add form, and the top of both
-  columns (category cards and expense list) should fit on the first
-  screen.
+- **Less scrolling:** the page should look like an app, not a long
+  form. On a laptop, the page title (with the + Add expense button), the
+  Spent this month box, and the top of both columns (category cards and
+  expense list) should fit on the first screen.
 - **Use the screen width:** the page content is up to about 1400 pixels
   wide, with small margins (about 24 pixels) on each side, instead of a
   narrow centred column.
 
 ### Page columns
 - On a laptop or wider screen (about 1000 pixels wide or more), the area
-  below the add form is split into two columns:
+  below the Spent this month box is split into two columns:
   - **Left:** the category box (the "This month" heading and all the
     category cards), taking a bit more than half the width (about 55%).
   - **Right:** the Expenses box, taking the rest.
@@ -176,6 +186,13 @@ section 3). Adding, renaming, and deleting categories happens in the
     It uses the page subtitle plum.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
+- **+ Add expense button:** a solid sage button, like the other main
+  buttons, at the right end of the title row, level with the title. It
+  opens the Add expense popup (section 2). It is always available,
+  including while the page is loading or the server can't be reached.
+  - On narrow screens (phones), where the title and the button don't fit
+    side by side, the button moves below the subtitle, left-aligned with
+    the title.
 - **Waking note:** the online backend sleeps when nobody has used it for a
   while, and takes about a minute to wake up. If the page's first load
   (the cards, list, months, and Spent this month total) is still waiting
@@ -189,8 +206,8 @@ section 3). Adding, renaming, and deleting categories happens in the
 ### Spent this month box
 - A cream box, styled like the other boxes, across the full width of the
   page, between the page title (and the server banner, when it shows) and
-  the Add expense box. Its text is left-aligned with the boxes below.
-- Three lines:
+  the two columns. Its text is left-aligned with the boxes below.
+- Up to four lines:
   - **The label**, small, in the secondary muted plum: "Spent this month"
     when showing the current month, otherwise "Spent in " and the month,
     for example "Spent in September 2026".
@@ -199,6 +216,9 @@ section 3). Adding, renaming, and deleting categories happens in the
     adds amounts up itself. For the current month it is the summary's
     `total_spent_paise`. For other months it comes from the month total
     (endpoint 11 in `specs/api-contract-spec.md`).
+  - **The insight line**, directly under the amount, in the secondary
+    muted plum, for example "Rs 620.00 less than September · Food is your
+    biggest category". See "Insight line" below.
   - **The month** underneath, for example "October 2026", in the
     secondary muted plum. It is shown only for the current month. For
     other months it is hidden, because the label already names the month.
@@ -227,8 +247,38 @@ section 3). Adding, renaming, and deleting categories happens in the
   - A missing or invalid total shows `Rs –`, never "NaN".
   - Rs 0.00 when nothing has been spent in that month.
 - After every successful add, edit, delete, or category change, the
-  shown month's total and the months list reload, and the box stays on
-  the month it was showing.
+  shown month's total (with its insight line) and the months list reload,
+  and the box stays on the month it was showing.
+
+### Insight line
+- It describes **whichever month the box is showing** (the current month,
+  or an earlier one chosen with the arrows), compared with the month just
+  before it. It comes from the backend with that month's total (the
+  `insight` value in `specs/api-contract-spec.md`). The page only turns
+  it into words; it never adds up or subtracts amounts itself.
+- It has up to two parts, joined by " · ":
+  1. **Compared with the month before** (only when that month has at
+     least one expense):
+     - "Rs 620.00 less than September" when less was spent,
+     - "Rs 620.00 more than September" when more was spent,
+     - "Same as September" when the totals are exactly equal.
+     The month before is named by its month name only, or with its year
+     when it is in a different year, for example "less than December
+     2025". The amount uses the normal money format, with 2 decimals.
+  2. **The biggest category** (only when the shown month has at least
+     one expense): "Food is your biggest category". If two or more
+     categories tie for the most spent, all of them are named, in
+     category order: "Food and Bills are your biggest categories", or
+     "Food, Bills and Other are your biggest categories".
+- **When neither part applies** (no expenses in the shown month or the
+  month before): "No expenses in October 2026." (with the shown month).
+- **When only one part applies**, only that part shows, for example "Food
+  is your biggest category" in the first month with expenses, or
+  "Rs 9,210.00 less than September" early in a month with no expenses
+  yet.
+- No insight line while the total is loading, or if it can't be loaded.
+- If the insight is missing or can't be read, the line is left out; the
+  total still shows.
 
 ### Category box and its "This month" heading
 - One cream box holds the heading and one card per category. The
@@ -254,7 +304,8 @@ section 3). Adding, renaming, and deleting categories happens in the
 - **Grid:** 2 cards per row in the left column on a laptop, 2 per row on
   a tablet-sized screen, 1 per row on a phone.
 - Each card shows:
-  - The **category name**.
+  - The category's **icon** (see "Category icons") to the left of the
+    **category name**.
   - **Spent of limit**, for example `Rs 3,200.00 of Rs 5,000.00`. With no
     limit set, just the spent amount, for example `Rs 3,200.00 spent`.
   - A **progress bar** showing spent as a share of the limit. It is
@@ -270,50 +321,90 @@ section 3). Adding, renaming, and deleting categories happens in the
   pixels instead of 1) and light red background, a full red progress bar,
   and the status line `Over limit by Rs X` in red bold text. It sits on
   the cream category box, not the pink page, so the red stands out
-  clearly. The warning is always in words, not just colour.
+  clearly. The warning is always in words, not just colour. The icon
+  circle keeps its own tint; it never turns red.
 
-### Add expense form
-- The form runs across the **full width** of the page, above the two
-  columns.
-- On a laptop, all fields sit in **one horizontal row**, in this order:
-  Amount, Category, Date, Note, then the **Add expense** button.
+### Category icons
+- Each category has a small line icon inside a soft coloured circle
+  (about 32 pixels across, icon about 18 pixels). It appears on the
+  category's card and on each of its expense rows.
+- **The icon follows the category, not its name:** the six starting
+  categories always keep their icons, even after being renamed (Food
+  renamed to Groceries keeps the fork and knife). Every category created
+  in the Manage categories popup gets the default icon, whatever its name,
+  even "Food". The starting six are the categories with ids 1 to 6 (see
+  `specs/backend-spec.md`).
+
+| Category (starting id) | Icon | Circle | Icon colour |
+|---|---|---|---|
+| Food (1) | fork and knife | soft pink `#F6DCE6` | plum `#553047` |
+| Transport (2) | bus | light sage `#E3EAE0` | deep sage `#4F6F52` |
+| Shopping (3) | shopping bag | warm beige `#EFE3CF` | dark brown `#5C4033` |
+| Bills (4) | receipt | light sage `#E3EAE0` | deep sage `#4F6F52` |
+| Entertainment (5) | film ticket | soft pink `#F6DCE6` | plum `#553047` |
+| Other (6) | three dots | warm beige `#EFE3CF` | dark brown `#5C4033` |
+| Any category you create | tag | light sage `#E3EAE0` | deep sage `#4F6F52` |
+
+- **Decorative for screen readers:** icons are hidden from screen readers
+  and have no text of their own, because the category name is always
+  shown next to them in words.
+- The icons are drawn in the page's own code (like the pencil and bin),
+  so nothing extra is downloaded.
+
+### Popup (add expense)
+- Looks exactly like the edit popup: a cream box in the middle of the
+  screen, over a darkened page, with lighter cream input fields.
+- Title "Add expense", the four fields (Amount, Category, Date, Note)
+  stacked one per line, each with a visible label above it, then **Add
+  expense** and **Cancel**.
 - The Category box starts empty, showing "Choose a category" in muted
   plum placeholder text.
-- Each field keeps a visible label above it.
-- Error messages appear **just below the row**, each one naming its field
-  (for example "Amount: Please enter an amount.").
-- Messages that are not about one field (server error, not found) appear
-  in the same place below the row.
+- Each error message appears **under its field**, as in the edit popup.
+  Messages that are not about one field appear at the top of the popup.
+- While the popup is open, the page behind it can't be used.
+- When it opens, the cursor goes to the Amount field. When it closes, the
+  cursor goes back to the + Add expense button.
 
 ### Expense list
 - **Month choice:** a drop-down at the right end of the "Expenses"
   heading line, styled like the other input fields (lighter cream), with
   the screen-reader label "Show expenses from". See section 4 for how it
   works.
-- Each expense is one clean row showing, left to right: **date**,
-  **category**, **note** (blank if none), **amount** (right-aligned), and
-  two small **icon buttons**: edit (pencil) and delete (bin).
+- Each expense is one row showing, left to right:
+  1. The category's **icon** (see "Category icons").
+  2. Two lines of text:
+     - **Main text**, in the main deep plum: the expense's **note**, or
+       the **category name** if it has no note.
+     - **Small text** underneath, in the secondary muted plum: the
+       category and the day, joined by " · ", for example "Food · Today".
+       If the main text is already the category name (no note), only the
+       day shows, for example "Yesterday", so the name isn't repeated.
+  3. The **amount**, right-aligned, in the main deep plum.
+  4. Two small **icon buttons**: edit (pencil) and delete (bin).
+- **The day** is worked out in IST, like the current month:
+  - "Today" for today's date,
+  - "Yesterday" for the day before,
+  - otherwise a short date: "12 Oct" in the current year, or "12 Oct
+    2025" in other years.
 - The icon buttons have text labels for screen readers ("Edit expense",
   "Delete expense") and show the same words as a tooltip on hover.
 - Rows are separated by thin lines. No other decoration.
-- **Column headings:** above the rows, small headings "Date", "Category",
-  "Note", and "Amount" in muted plum, each lined up with its column.
-  "Amount" is right-aligned like the amounts. There is no heading above
-  the icon buttons. The headings only show when there is at least one
-  expense (not while loading, on an error, or when the list is empty).
-- Rows stay on one line as long as the Expenses box is at least about
-  420 pixels wide inside, which covers almost every laptop. Long notes
-  wrap within the Note column.
-- When the box is narrower than that (phones and small windows), each row
-  wraps onto two lines (category and amount on top, date and note below),
-  keeping the amount and icon buttons visible, and the column headings
-  are hidden.
+- **No column headings.** The old "Date", "Category", "Note", "Amount"
+  headings are removed, because the rows are no longer laid out in
+  columns: each row explains itself (the amount is clearly an amount, and
+  the small text names the category and day).
+- Long notes wrap onto more lines within the text part; the icon, the
+  amount, and the icon buttons stay on the row and stay visible. The same
+  layout is used on every screen width, so rows no longer switch to a
+  different layout on narrow screens.
+- Screen readers read each row in order: note (or category), category
+  and day, amount, then the two buttons.
 - The delete confirmation appears inside that expense's row (see
   section 4).
 
 ### Popup (edit expense)
 - A cream box in the middle of the screen, over a darkened page. Its
-  input fields are the lighter cream, like the add form's.
+  input fields are the lighter cream, like the add expense popup's.
 - Title "Edit expense", the four fields (Amount, Category, Date, Note)
   stacked one per line, then **Save changes** and **Cancel**.
 - The Category box lists the current categories, in category order, and
@@ -352,11 +443,12 @@ section 3). Adding, renaming, and deleting categories happens in the
   much, then back when it disappears.
 
 ### Narrow phone screens
-- Everything stacks into **one column**, in this order: page title,
-  banner, Spent this month box, add form (fields stacked one per line
-  with a full-width
-  button), the category box (one card per row), and the Expenses box
-  (each row wrapping so the amount and icon buttons stay visible).
+- Everything stacks into **one column**, in this order: page title (with
+  the + Add expense button below the subtitle), banner, Spent this month
+  box, the category box (one card per row), and the Expenses box (long
+  notes wrap, and the amount and icon buttons stay visible).
+- The popups fit the screen width, with their fields stacked one per
+  line.
 - Nothing on the page needs sideways scrolling.
 
 ---
@@ -397,9 +489,19 @@ the current month (IST), and spent counts only that month's expenses.
 
 ---
 
-## 2. Add expense form
+## 2. Add expense popup
 
-The form is always in add mode. It is never used for editing.
+The popup is only for adding. Editing uses its own popup (section 3).
+
+### Opening and closing
+- The **+ Add expense** button in the page title row opens the popup,
+  with every field at its default (below).
+- **Cancel** closes the popup without saving, and anything typed is
+  discarded. Pressing the Escape key does the same.
+- Clicking the darkened page behind the popup does **not** close it, so
+  typed details are not lost by accident.
+- While saving, Cancel and Escape do nothing until the answer comes back.
+- Opening the popup again always starts fresh, with the defaults.
 
 ### Fields
 | Field    | Input                         | Default    |
@@ -409,16 +511,17 @@ The form is always in add mode. It is never used for editing.
 | Date     | Date picker, cannot pick a day after today | today |
 | Note     | Text box, max 100 characters  | empty      |
 
-Button: **Add expense**.
+Buttons: **Add expense** and **Cancel**.
 
 - The category list comes from the summary. Until the summary has loaded,
   the Category box offers only "Choose a category".
-- If the category chosen in the add form is renamed or deleted (in the
-  Manage categories popup), the Category box goes back to "Choose a
-  category". The rest of the form keeps what was typed.
+- If the list of categories changes while the popup is open (for example
+  after a reload) and the chosen category is no longer in it, the
+  Category box goes back to "Choose a category". The rest of the popup
+  keeps what was typed.
 
 ### Frontend checks before sending
-If one fails, show its message below the form row and send nothing. The
+If one fails, show its message under its field and send nothing. The
 same checks and messages are used in the edit popup.
 - Amount empty: "Please enter an amount."
 - Amount not a number: "Amount must be a number, like 12.50."
@@ -427,9 +530,8 @@ same checks and messages are used in the edit popup.
   decimal places."
 - Amount over Rs 10,00,00,000.00: "Amount is too large." (Exactly
   Rs 10,00,00,000.00 is allowed.)
-- Category not chosen: "Please choose a category." (Below the row this
-  reads "Category: Please choose a category.") Only the add form can
-  have no category; the edit popup always has one.
+- Category not chosen: "Please choose a category." Only the add popup
+  can have no category; the edit popup always has one.
 - Date empty: "Please choose a date."
 - Date after today: "Date cannot be in the future."
 - Note over 100 characters: "Note must be 100 characters or fewer."
@@ -438,18 +540,21 @@ When the checks pass, the amount is converted from rupees to whole paise
 (12.50 becomes 1250) and sent.
 
 ### States
-- **Saving:** the button shows "Saving..." and is disabled, so the
+- **Saving:** **Add expense** shows "Saving..." and is disabled, so the
   expense can't be sent twice.
-- **Success:** the form clears back to its defaults (amount and note
-  empty, category back to "Choose a category", date = today). The list
-  and cards reload.
-- **Refused by backend (422):** show the backend's `message` below the
-  row, labelled with the field named in `field`, or on its own if `field`
-  is null. Keep everything the user typed.
+- **Success:** the popup closes, and "Expense added" shows in the Expenses
+  box (section 7). The list, the cards, and the Spent this month box
+  reload.
+- **Refused by backend (422):** show the backend's `message` under the
+  field named in `field`, or at the top of the popup if `field` is null.
+  Keep everything the user typed.
 - **Server error (500):** show "Something went wrong on the server. Please
-  try again." below the row. Keep everything the user typed.
-- **Can't reach server:** show the server banner (see section 6). Keep
-  everything the user typed.
+  try again." at the top of the popup. Keep everything the user typed.
+- **Can't reach server:** show "Can't reach the server. Check that the
+  backend is running, then try again." at the top of the popup, and show
+  the server banner on the page behind it (see section 6). The popup
+  stays open with everything the user typed, so they can try **Add
+  expense** again.
 
 ---
 
@@ -463,10 +568,10 @@ When the checks pass, the amount is converted from rupees to whole paise
 - Clicking the darkened page behind the popup does **not** close it, so
   typed changes are not lost by accident.
 - While saving, Cancel and Escape do nothing until the answer comes back.
-- The add form is not affected by opening, using, or closing the popup.
+- Only one popup can be open at a time.
 
 ### Checks
-The same frontend checks and messages as the add form (section 2). Each
+The same frontend checks and messages as the add popup (section 2). Each
 message appears under its field inside the popup.
 
 ### States
@@ -618,11 +723,12 @@ setting limits, and adding, renaming, or deleting categories.
   **"Can't reach the server. Check that the backend is running, then
   try again."**
   with a **Try again** button.
-- The rest of the page still shows: page title, Spent this month box,
-  form, and any cards or list already loaded. The page is never blank or broken, and no raw
-  technical error text is shown.
-- Anything the user had typed in the form, the edit popup, a limit box,
-  or the Manage categories popup is kept.
+- The rest of the page still shows: page title, the + Add expense
+  button, Spent this month box, and any cards or list already loaded.
+  The page is never blank or broken, and no raw technical error text is
+  shown.
+- Anything the user had typed in the add popup, the edit popup, a limit
+  box, or the Manage categories popup is kept.
 
 **Try again:** reloads the cards, the list (for the chosen month), the
 months list, and the Spent this month box's total. If they all load, the
@@ -644,7 +750,7 @@ seconds, inside the box where the change was made:
 
 | Change | Message | Where it appears |
 |---|---|---|
-| Adding an expense | Expense added | Add expense box, below the form row |
+| Adding an expense | Expense added | Expenses box, at the top of the list |
 | Saving changes to an expense | Expense updated | Expenses box, at the top of the list |
 | Deleting an expense | Expense deleted | Expenses box, at the top of the list |
 | Setting or changing a limit | Limit saved | Inside that category's card |
@@ -665,17 +771,21 @@ seconds, inside the box where the change was made:
   inside the Manage categories popup.
 - **Closing the Manage categories popup** removes any message still
   showing in it.
-- **"Expense updated"** appears after the edit popup has closed, so it is
-  seen in the Expenses box.
+- **"Expense added"** and **"Expense updated"** appear after their popup
+  has closed, so they are seen in the Expenses box, where the expense
+  appears. (If the Expenses box is showing a different month from the
+  new expense's date, the message still shows there, and the expense
+  appears when its month or "All months" is chosen.)
 
 ---
 
 ## User flow
 1. **Open the page.** The cards and list show their loading states, then
    their data (or the empty/error/server states above).
-2. **Add an expense.** Fill the form row (including choosing a
-   category), click **Add expense**. The list
-   and cards update. If the category is now over its limit, its card turns
+2. **Add an expense.** Click **+ Add expense**. In the popup, fill in the
+   fields (including choosing a category) and click **Add expense**. The
+   popup closes, "Expense added" shows in the Expenses box, and the list,
+   cards, and Spent this month box update. If the category is now over its limit, its card turns
    red with the over-limit warning. The expense is still saved.
 3. **Edit an expense.** Click the **edit** icon on a list row. The popup
    opens. Change fields, click **Save changes**. The popup closes and the

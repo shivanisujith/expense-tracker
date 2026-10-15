@@ -72,6 +72,10 @@ delete ones they no longer use.
   - The total amount spent in any earlier month, across all categories,
     so the person can look back month by month. Expenses count in the
     month of their date, not the month they were saved.
+  - For the month shown in the Spent this month box: how its total
+    compares with the month before (an exact difference, or nothing when
+    the month before has no expenses), and which category, or tied
+    categories, it spent the most on.
   - A clear warning when a category is over its limit. Going over a limit
     does not block saving the expense.
   - A clear error message whenever an input is refused, including when a
@@ -103,8 +107,8 @@ delete ones they no longer use.
    "Can't reach the server" message instead of a blank or broken page.
    -- decided by: manual browser check, with the backend stopped on purpose.
 9. A user can add a category with a valid name. It appears as a category
-   card and in the add form's and edit popup's category lists, and it is
-   still there after reloading the page.
+   card and in the add expense popup's and edit popup's category lists,
+   and it is still there after reloading the page.
    -- decided by: automated test, plus a manual browser check.
 10. A category name that is empty (or only spaces), longer than 30
     characters, or the same as another category's name ignoring capital
@@ -168,6 +172,10 @@ delete ones they no longer use.
     every backend and frontend test has passed.
     -- decided by: CI run (GitHub Actions), plus a manual browser check on
     the public site.
+23. The insight for a month states the exact difference from the month
+    before's total, names the biggest category (all of them on a tie), is
+    calculated by the backend, and leaves out any part that doesn't apply.
+    -- decided by: automated test, plus a manual browser check.
 
 ## Known Limitations
 - **No login.** The online app has no accounts or passwords. Anyone with

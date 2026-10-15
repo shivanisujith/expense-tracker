@@ -64,12 +64,16 @@ Every response that includes an expense uses this shape:
   "id": 7,
   "amount_paise": 1250,
   "category": "Food",
+  "category_id": 1,
   "date": "2026-10-07",
   "note": "Lunch"
 }
 ```
 
-`note` is always text and is `""` when there is no note.
+`note` is always text and is `""` when there is no note. `category_id` is
+the id of the expense's category; the frontend uses it for the category's
+icon. When adding or editing, only `category` (the name) is sent;
+`category_id` in a request is ignored like any other extra field.
 
 ## The error object
 Every error response (404, 422, 500) uses this shape:
@@ -143,9 +147,9 @@ that month. Newest date first. Same date: most recently saved first.
 **200 OK**
 ```json
 [
-  {"id": 8, "amount_paise": 50000, "category": "Bills", "date": "2026-10-07", "note": ""},
-  {"id": 7, "amount_paise": 1250, "category": "Food", "date": "2026-10-07", "note": "Lunch"},
-  {"id": 3, "amount_paise": 9900, "category": "Shopping", "date": "2026-09-28", "note": "Socks"}
+  {"id": 8, "amount_paise": 50000, "category": "Bills", "category_id": 4, "date": "2026-10-07", "note": ""},
+  {"id": 7, "amount_paise": 1250, "category": "Food", "category_id": 1, "date": "2026-10-07", "note": "Lunch"},
+  {"id": 3, "amount_paise": 9900, "category": "Shopping", "category_id": 3, "date": "2026-09-28", "note": "Socks"}
 ]
 ```
 No expenses (in that month): `[]`. A month after the current one is
@@ -217,6 +221,11 @@ popup. "Current month" is worked out in IST.
 {
   "month": "2026-10",
   "total_spent_paise": 51250,
+  "insight": {
+    "previous_month": "2026-09",
+    "difference_paise": -62000,
+    "biggest_categories": [{"category_id": 4, "category": "Bills"}]
+  },
   "categories": [
     {"category_id": 1, "category": "Food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
     {"category_id": 2, "category": "Transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
@@ -234,6 +243,8 @@ popup. "Current month" is worked out in IST.
 - `total_spent_paise` is everything spent in the current month across all
   categories, in whole paise (here 1250 + 50000 = 51250). It is 0 when
   nothing was spent this month.
+- `insight` compares the current month with the month before (see "The
+  insight object" below).
 
 Errors: 500 only.
 
@@ -344,10 +355,19 @@ their date. Works for the current month and any earlier month.
 
 **200 OK**
 ```json
-{"month": "2026-09", "total_spent_paise": 9210}
+{
+  "month": "2026-09",
+  "total_spent_paise": 9210,
+  "insight": {
+    "previous_month": "2026-08",
+    "difference_paise": null,
+    "biggest_categories": [{"category_id": 1, "category": "Food"}]
+  }
+}
 ```
 `total_spent_paise` is 0 when nothing was spent that month. For the
-current month it equals the summary's `total_spent_paise`.
+current month it equals the summary's `total_spent_paise`, and `insight`
+equals the summary's `insight`.
 
 **Errors**
 - 422 `invalid_month` if the month is not a real month in `YYYY-MM` form.
@@ -359,6 +379,25 @@ current month it equals the summary's `total_spent_paise`.
 - 500 `server_error`.
 
 ---
+
+## The insight object
+Sent in the summary (endpoint 5) and with every month total (endpoint
+11). It describes the shown month compared with the month before it, by
+expense date (rules in `specs/backend-spec.md`, "Insight for a month").
+
+| Field | Meaning |
+|---|---|
+| `previous_month` | The month before, as `YYYY-MM` (`"2025-12"` before `"2026-01"`). |
+| `difference_paise` | Shown month's total minus the month before's, in whole paise. Negative = less spent, 0 = the same. `null` when the month before has no expenses. |
+| `biggest_categories` | `[{"category_id", "category"}, …]`: the categories with the most spent in the shown month, in category order (several only on an exact tie). `[]` when the shown month has no expenses. |
+
+Examples (shown month October 2026):
+- October Rs 512.50 with Bills biggest, September Rs 1,132.50:
+  `{"previous_month": "2026-09", "difference_paise": -62000, "biggest_categories": [{"category_id": 4, "category": "Bills"}]}`
+- First month with expenses, Food and Bills tied:
+  `{"previous_month": "2026-09", "difference_paise": null, "biggest_categories": [{"category_id": 1, "category": "Food"}, {"category_id": 4, "category": "Bills"}]}`
+- Nothing in October or September:
+  `{"previous_month": "2026-09", "difference_paise": null, "biggest_categories": []}`
 
 ## When the backend can't be reached
 If the backend is stopped or unreachable, there is no response at all, so

@@ -51,9 +51,11 @@ One row per category.
 | id     | Unique whole number, given by the database. Never reused.        |
 | name   | 1 to 30 characters, no spaces at the start or end. Unique when capital letters are ignored. |
 
-- **Category order:** by `id`, smallest first. The starting six get ids in
-  the order Food, Transport, Shopping, Bills, Entertainment, Other, so they
-  come first; new categories get larger ids, so they are added at the end.
+- **Category order:** by `id`, smallest first. The starting six get ids
+  1 to 6, in the order Food, Transport, Shopping, Bills, Entertainment,
+  Other, so they come first; new categories get larger ids (7 and up,
+  never reused), so they are added at the end. The frontend uses ids 1
+  to 6 to give the starting six their fixed icons.
   Renaming does not change the id, so a renamed category keeps its place.
 - **Starting categories:** a brand-new database starts with Food,
   Transport, Shopping, Bills, Entertainment, Other.
@@ -176,7 +178,8 @@ answers with an error explaining which field failed and why.
 - Without a month: returns all expenses from every month.
 - With a month (rule 22): returns only the expenses whose **date** is in
   that month. When they were saved doesn't matter.
-- Each expense has its category's **current** name.
+- Each expense has its category's **current** name, and its category's
+  id.
 - Ordered newest date first. If two expenses have the same date, the one
   saved later comes first.
 
@@ -210,6 +213,23 @@ For each current category, always all of them, in category order:
 - It always equals the sum of every category's **spent** above, because
   every expense belongs to exactly one current category.
 - It is part of the summary, so the page never adds amounts up itself.
+
+### Insight for a month
+Sent with the current month's summary and with any month's total, so the
+Spent this month box can describe whichever month it shows. For the
+**shown month** and the **month before it** (by expense date, as for all
+month totals):
+- **previous month:** the month before the shown month, as `YYYY-MM`
+  (for January, December of the year before).
+- **difference:** the shown month's total minus the month before's total,
+  exact, in whole paise. Negative means less was spent than the month
+  before, 0 means exactly the same. It is **"none"** (`null`) when the
+  month before has no expenses at all, because there is nothing real to
+  compare with.
+- **biggest categories:** the categories with the largest spent amount in
+  the shown month, by expense date, each with its id and **current** name,
+  in category order. Normally one; several when they tie exactly. Empty
+  when the shown month has no expenses.
 
 All sums use whole paise only, so they are exact. The summary is also how
 the frontend gets the current list of categories.
