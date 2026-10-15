@@ -129,7 +129,8 @@ def test_month_total_is_the_exact_sum_of_that_months_expenses(client):
     response = client.get("/api/months/2026-09/total")
 
     assert response.status_code == 200
-    assert response.json() == {"month": "2026-09", "total_spent_paise": 9544}
+    assert response.json()["month"] == "2026-09"
+    assert response.json()["total_spent_paise"] == 9544
 
 
 def test_month_total_counts_by_expense_date_not_when_it_was_saved(client, db_path):
@@ -142,7 +143,8 @@ def test_month_total_counts_by_expense_date_not_when_it_was_saved(client, db_pat
 
 def test_month_total_is_zero_for_a_month_with_no_expenses(client):
     add(client, 100, "2026-10-01")
-    assert client.get("/api/months/2026-05/total").json() == {"month": "2026-05", "total_spent_paise": 0}
+    response = client.get("/api/months/2026-05/total").json()
+    assert (response["month"], response["total_spent_paise"]) == ("2026-05", 0)
 
 
 def test_month_total_for_the_current_month_matches_the_summary(client):

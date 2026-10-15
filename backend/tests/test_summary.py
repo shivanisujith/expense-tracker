@@ -36,6 +36,7 @@ def test_new_database_summary_lists_the_six_starting_categories_in_order(client)
     assert response.json() == {
         "month": "2026-10",
         "total_spent_paise": 0,
+        "insight": {"previous_month": "2026-09", "difference_paise": None, "biggest_categories": []},
         "categories": [
             {
                 "category_id": position + 1,

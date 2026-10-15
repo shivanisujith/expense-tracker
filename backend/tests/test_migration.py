@@ -130,6 +130,7 @@ def test_converted_data_shows_through_the_api(old_db):
         "id": 1,
         "amount_paise": 1250,
         "category": "Food",
+        "category_id": 1,
         "date": "2026-10-07",
         "note": "Lunch",
     }

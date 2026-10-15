@@ -82,6 +82,7 @@ def expense_to_dict(row) -> dict:
         "id": row["id"],
         "amount_paise": row["amount_paise"],
         "category": row["category"],
+        "category_id": row["category_id"],
         "date": row["date"],
         "note": row["note"],
     }
@@ -89,7 +90,7 @@ def expense_to_dict(row) -> dict:
 
 # Expenses store a category id; responses show the category's current name.
 EXPENSE_WITH_CATEGORY_NAME = (
-    "SELECT e.id, e.amount_paise, c.name AS category, e.date, e.note"
+    "SELECT e.id, e.amount_paise, c.name AS category, e.category_id, e.date, e.note"
     " FROM expenses e JOIN categories c ON c.id = e.category_id"
 )
 
@@ -195,6 +196,34 @@ def month_total(conn, month: str) -> int:
     ).fetchone()[0]
 
 
+def previous_month(month: str) -> str:
+    """The month before a YYYY-MM month: "2026-01" -> "2025-12"."""
+    year, number = int(month[:4]), int(month[5:])
+    return f"{year - 1}-12" if number == 1 else f"{year:04d}-{number - 1:02d}"
+
+
+def month_insight(conn, month: str) -> dict:
+    """How a month compares with the month before, and where most went
+    (backend-spec "Insight for a month"). Everything is by expense date."""
+    before = previous_month(month)
+    before_has_expenses = conn.execute(
+        "SELECT COUNT(*) FROM expenses WHERE substr(date, 1, 7) = ?", (before,)
+    ).fetchone()[0] > 0
+    difference = month_total(conn, month) - month_total(conn, before) if before_has_expenses else None
+
+    spent_rows = conn.execute(
+        "SELECT c.id, c.name, CAST(SUM(e.amount_paise) AS BIGINT) AS spent"
+        " FROM expenses e JOIN categories c ON c.id = e.category_id"
+        " WHERE substr(e.date, 1, 7) = ? GROUP BY c.id, c.name ORDER BY c.id",
+        (month,),
+    ).fetchall()
+    most = max((row["spent"] for row in spent_rows), default=None)
+    biggest = [
+        {"category_id": row["id"], "category": row["name"]} for row in spent_rows if row["spent"] == most
+    ]
+    return {"previous_month": before, "difference_paise": difference, "biggest_categories": biggest}
+
+
 @app.get("/api/months")
 def list_months():
     conn = db.connect()
@@ -213,9 +242,10 @@ def get_month_total(month: str):
     conn = db.connect()
     try:
         total_spent = month_total(conn, month)
+        insight = month_insight(conn, month)
     finally:
         conn.close()
-    return {"month": month, "total_spent_paise": total_spent}
+    return {"month": month, "total_spent_paise": total_spent, "insight": insight}
 
 
 @app.get("/api/summary")
@@ -231,6 +261,7 @@ def get_summary():
         ).fetchall()
         limit_rows = conn.execute("SELECT category_id, limit_paise FROM category_limits").fetchall()
         total_spent = month_total(conn, month)
+        insight = month_insight(conn, month)
     finally:
         conn.close()
 
@@ -251,7 +282,12 @@ def get_summary():
                 "over_limit": is_over_limit(spent, limit),
             }
         )
-    return {"month": month, "total_spent_paise": total_spent, "categories": categories}
+    return {
+        "month": month,
+        "total_spent_paise": total_spent,
+        "insight": insight,
+        "categories": categories,
+    }
 
 
 def category_not_found() -> ApiError:
