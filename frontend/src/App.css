@@ -33,11 +33,23 @@ body {
   line-height: 1.45;
 }
 
-/* Page title: sits directly on the pink page, no bar or box. */
+/* Page title: sits directly on the pink page, no bar or box. The
+   + Add expense button sits at the right end of the row. */
 .page-title {
   max-width: 1400px;
   margin: 0 auto;
   padding: 28px 24px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px 24px;
+}
+
+.add-expense-button {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 18px;
+  white-space: nowrap;
 }
 
 .page-title h1 {
@@ -278,14 +290,7 @@ button.danger-solid:hover:not(:disabled) {
   border-color: var(--danger);
 }
 
-/* Add form: one row on a laptop */
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 2fr auto;
-  gap: 12px;
-  align-items: end;
-}
-
+/* Fields in the add and edit popups */
 .field label {
   display: block;
   color: var(--muted);
@@ -318,20 +323,6 @@ button.danger-solid:hover:not(:disabled) {
 .field input[aria-invalid='true'],
 .field select[aria-invalid='true'] {
   border-color: var(--danger);
-}
-
-.form-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.form-buttons button {
-  height: 38px;
-  white-space: nowrap;
-}
-
-.form-messages {
-  margin-top: 10px;
 }
 
 .field-error,
@@ -466,7 +457,7 @@ button.danger-solid:hover:not(:disabled) {
   gap: 8px;
 }
 
-/* Edit popup */
+/* Add and edit popups */
 .modal {
   width: min(440px, calc(100vw - 32px));
   padding: 20px;
@@ -721,17 +712,6 @@ button.danger-solid:hover:not(:disabled) {
   }
 }
 
-/* Tablet: form in two rows. */
-@media (max-width: 900px) {
-  .form-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .field-wide {
-    grid-column: span 2;
-  }
-}
-
 /* Phone: everything in one column. */
 @media (max-width: 600px) {
   .page-title,
@@ -744,16 +724,12 @@ button.danger-solid:hover:not(:disabled) {
     font-size: 1.6rem;
   }
 
-  .category-grid,
-  .form-row {
+  .category-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .field-wide {
-    grid-column: auto;
-  }
-
-  .form-buttons button {
-    flex: 1;
+  /* The + Add expense button moves below the subtitle. */
+  .page-title {
+    flex-direction: column;
   }
 }

@@ -14,8 +14,8 @@ afterEach(() => {
 test('a message shows in its place and disappears after about 3 seconds', () => {
   const { result } = renderHook(() => useSuccessMessage())
 
-  act(() => result.current.showSuccess('Expense added', 'add-form'))
-  expect(result.current.success).toMatchObject({ message: 'Expense added', place: 'add-form' })
+  act(() => result.current.showSuccess('Expense added', 'expenses'))
+  expect(result.current.success).toMatchObject({ message: 'Expense added', place: 'expenses' })
 
   act(() => vi.advanceTimersByTime(SUCCESS_MS - 1))
   expect(result.current.success).not.toBeNull()
@@ -27,7 +27,7 @@ test('a message shows in its place and disappears after about 3 seconds', () => 
 test('a new message replaces the current one, moves to its own place, and restarts the 3 seconds', () => {
   const { result } = renderHook(() => useSuccessMessage())
 
-  act(() => result.current.showSuccess('Expense added', 'add-form'))
+  act(() => result.current.showSuccess('Expense added', 'expenses'))
   act(() => vi.advanceTimersByTime(2000))
   act(() => result.current.showSuccess('Limit saved', 'card-3'))
   act(() => vi.advanceTimersByTime(2000))

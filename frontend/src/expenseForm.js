@@ -1,4 +1,4 @@
-// Shared by the add form and the edit popup: the form's starting values and
+// Shared by the add and edit popups: the form's starting values and
 // the frontend checks from specs/frontend-spec.md. The backend checks again.
 
 import { NOTE_MAX_LENGTH } from './categories.js'
@@ -7,8 +7,6 @@ import { paiseToRupeesText, parseRupees } from './money.js'
 
 // Backend field names -> form field names, for showing 422 errors.
 export const FORM_FIELD = { amount_paise: 'amount', category: 'category', date: 'date', note: 'note' }
-
-export const FIELD_LABELS = { amount: 'Amount', category: 'Category', date: 'Date', note: 'Note' }
 
 // Category starts empty, so the box shows "Choose a category".
 export function emptyForm() {

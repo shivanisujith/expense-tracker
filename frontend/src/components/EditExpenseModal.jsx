@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { editExpense } from '../api.js'
 import { todayText } from '../dates.js'
 import { FORM_FIELD, checkForm, formFromExpense } from '../expenseForm.js'
+import ModalField from './ModalField.jsx'
 
 const UNREACHABLE_MESSAGE = "Can't reach the server. Check that the backend is running, then try again."
 
@@ -142,20 +143,6 @@ function EditExpenseModal({ expense, categories, onSaved, onClose, onNotFound, o
         </div>
       </form>
     </dialog>
-  )
-}
-
-function ModalField({ label, id, error, children }) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {children}
-      {error && (
-        <p className="field-error" id={`${id}-error`}>
-          {error}
-        </p>
-      )}
-    </div>
   )
 }
 

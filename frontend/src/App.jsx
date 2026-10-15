@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { getMonthTotal, getMonths, getSummary, listExpenses } from './api.js'
+import AddExpenseModal from './components/AddExpenseModal.jsx'
 import CategoryCards from './components/CategoryCards.jsx'
 import EditExpenseModal from './components/EditExpenseModal.jsx'
-import ExpenseForm from './components/ExpenseForm.jsx'
 import ExpenseList from './components/ExpenseList.jsx'
 import ManageCategoriesModal from './components/ManageCategoriesModal.jsx'
 import ServerBanner from './components/ServerBanner.jsx'
@@ -54,6 +54,10 @@ function App() {
 
   // The expense open in the edit popup, or null when the popup is closed.
   const [editing, setEditing] = useState(null)
+  const [adding, setAdding] = useState(false)
+  // After the Add expense popup closes, the cursor goes back to its button.
+  const addButtonRef = useRef(null)
+  const returnFocusToAddButton = useRef(false)
   const [managingCategories, setManagingCategories] = useState(false)
   const { success, showSuccess, clearSuccess } = useSuccessMessage()
 
@@ -175,15 +179,37 @@ function App() {
     setManagingCategories(false)
   }
 
+  useEffect(() => {
+    if (!adding && returnFocusToAddButton.current) {
+      returnFocusToAddButton.current = false
+      addButtonRef.current.focus()
+    }
+  }, [adding])
+
+  function closeAddExpense() {
+    returnFocusToAddButton.current = true
+    setAdding(false)
+  }
+
+  function handleAddSaved() {
+    closeAddExpense()
+    succeeded('Expense added', 'expenses')
+  }
+
   return (
     <>
       <header className="page-title">
-        <h1>Expense Tracker</h1>
-        <p className="page-subtitle">{`Hi there, here's your spending · ${formatFullDate()}`}</p>
-        {/* Always present, so screen readers announce the note when it appears. */}
-        <p className="waking-note" role="status" aria-live="polite" aria-label="Server status">
-          {waking ? WAKING_NOTE : ''}
-        </p>
+        <div className="title-text">
+          <h1>Expense Tracker</h1>
+          <p className="page-subtitle">{`Hi there, here's your spending · ${formatFullDate()}`}</p>
+          {/* Always present, so screen readers announce the note when it appears. */}
+          <p className="waking-note" role="status" aria-live="polite" aria-label="Server status">
+            {waking ? WAKING_NOTE : ''}
+          </p>
+        </div>
+        <button type="button" ref={addButtonRef} className="add-expense-button" onClick={() => setAdding(true)}>
+          + Add expense
+        </button>
       </header>
       <main className="app">
         {unreachable && <ServerBanner onRetry={retry} retrying={retrying} />}
@@ -194,12 +220,6 @@ function App() {
           status={spentIsCurrent ? summaryStatus : monthTotalStatus}
           earliestMonth={earliestMonth(months)}
           onMonthChange={showSpentMonth}
-        />
-        <ExpenseForm
-          categories={categories}
-          success={successFor('add-form')}
-          onSaved={() => succeeded('Expense added', 'add-form')}
-          onUnreachable={showUnreachable}
         />
         <div className="dashboard-columns">
           <CategoryCards
@@ -226,6 +246,14 @@ function App() {
           />
         </div>
       </main>
+      {adding && (
+        <AddExpenseModal
+          categories={categories}
+          onSaved={handleAddSaved}
+          onClose={closeAddExpense}
+          onUnreachable={showUnreachable}
+        />
+      )}
       {editing && (
         <EditExpenseModal
           key={editing.id}

@@ -6,7 +6,7 @@ export const SUCCESS_MS = 3000
  * Holds the one success message on the page (specs/frontend-spec.md,
  * section 7). Returns { success, showSuccess, clearSuccess }. `success` is
  * null or { message, place, key }. `place` says which box shows it:
- * 'add-form', 'expenses', 'categories', or 'card-<category id>'. The key
+ * 'expenses', 'categories', or 'card-<category id>'. The key
  * changes on every showSuccess, even for the same message, so it is shown
  * and announced again.
  */
