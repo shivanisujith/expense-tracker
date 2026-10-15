@@ -265,6 +265,19 @@ popup** (see section 5).
      The month before is named by its month name only, or with its year
      when it is in a different year, for example "less than December
      2025". The amount uses the normal money format, with 2 decimals.
+
+     **Trend icon:** a small icon (about the height of the text) at the
+     start of this part, just before the words:
+     - **less** than the month before: an arrow pointing **down**, in
+       sage green `#4F6F52` (5.0 : 1 on the cream box);
+     - **more** than the month before: an arrow pointing **up**, in muted
+       plum `#6A5260` (6.3 : 1 on the cream box). Not red, because red
+       only means over limit or error;
+     - **the same**: a **flat line**, in muted plum `#6A5260`.
+
+     With no comparison, there is no icon. The icon is decorative and
+     hidden from screen readers, because the words already say the same
+     thing.
   2. **The biggest category** (only when the shown month has at least
      one expense): "Food is your biggest category". If two or more
      categories tie for the most spent, all of them are named, in
