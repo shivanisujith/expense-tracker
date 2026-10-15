@@ -537,6 +537,27 @@ button.danger-solid:hover:not(:disabled) {
   line-height: 1.2;
 }
 
+.spent-insight {
+  margin: 0 0 2px;
+  color: var(--muted);
+}
+
+/* Trend icon before the comparison: sage when less was spent, muted plum
+   when more or the same. Never red: red only means over limit or error. */
+.trend-icon {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+.trend-down {
+  color: var(--accent);
+}
+
+.trend-up,
+.trend-same {
+  color: var(--muted);
+}
+
 /* The label on the left, the ‹ › arrows on the right */
 .spent-top {
   display: flex;

@@ -123,3 +123,81 @@ test('› is never enabled past the current month', () => {
   renderBox({ month: '2026-11', currentMonth: '2026-10' })
   expect(next().disabled).toBe(true)
 })
+
+// --- The insight line (goal-spec criterion 23) ---
+
+const INSIGHT = {
+  previous_month: '2026-09',
+  difference_paise: -62000,
+  biggest_categories: [{ category_id: 1, category: 'Food' }],
+}
+
+test('the insight line sits right under the amount, above the month', () => {
+  const { container } = renderBox({ data: { total_spent_paise: 9410, insight: INSIGHT } })
+  expect(boxText(container)).toEqual([
+    'Spent this month',
+    'Rs 94.10',
+    'Rs 620.00 less than September · Food is your biggest category',
+    'October 2026',
+  ])
+})
+
+test('an earlier month shows its own insight', () => {
+  const august = { ...INSIGHT, previous_month: '2026-08', difference_paise: 100 }
+  const { container } = renderBox({ month: '2026-09', data: { total_spent_paise: 9210, insight: august } })
+  expect(boxText(container)).toEqual([
+    'Spent in September 2026',
+    'Rs 92.10',
+    'Rs 1.00 more than August · Food is your biggest category',
+  ])
+})
+
+test('no insight line while loading, or when the total can\'t be loaded', () => {
+  const loading = renderBox({ data: null, status: 'loading' })
+  expect(boxText(loading.container)).toEqual(['Spent this month', 'Loading...'])
+  loading.unmount()
+
+  const failed = renderBox({ data: null, status: 'error' })
+  expect(boxText(failed.container)).toEqual(['Spent this month', 'Rs –'])
+})
+
+test('an unreadable insight is left out, and the total still shows', () => {
+  const { container } = renderBox({ data: { total_spent_paise: 9410, insight: { difference_paise: 'x' } } })
+  expect(boxText(container)).toEqual(['Spent this month', 'Rs 94.10', 'October 2026'])
+  expect(container.textContent).not.toContain('NaN')
+})
+
+// --- The trend icon at the start of the comparison ---
+
+function trendIcon(container) {
+  return container.querySelector('.spent-insight svg')
+}
+
+test.each([
+  ['less', -62000, 'down'],
+  ['more', 100, 'up'],
+  ['the same', 0, 'same'],
+])('%s than the month before: its icon comes before the words', (_, difference, trend) => {
+  const data = { total_spent_paise: 9410, insight: { ...INSIGHT, difference_paise: difference } }
+  const { container } = renderBox({ data })
+
+  const icon = trendIcon(container)
+  expect(icon.getAttribute('class')).toBe(`trend-icon trend-${trend}`)
+  // First thing in the line, before the words.
+  expect(container.querySelector('.spent-insight').firstElementChild).toBe(icon)
+})
+
+test('the trend icon is hidden from screen readers; the words say it', () => {
+  const { container } = renderBox({ data: { total_spent_paise: 9410, insight: INSIGHT } })
+
+  expect(trendIcon(container).getAttribute('aria-hidden')).toBe('true')
+  expect(screen.getByText('Rs 620.00 less than September · Food is your biggest category')).toBeTruthy()
+})
+
+test('no comparison: no trend icon', () => {
+  const noComparison = { ...INSIGHT, difference_paise: null }
+  const { container } = renderBox({ data: { total_spent_paise: 9410, insight: noComparison } })
+
+  expect(container.querySelector('.spent-insight').textContent).toBe('Food is your biggest category')
+  expect(trendIcon(container)).toBeNull()
+})

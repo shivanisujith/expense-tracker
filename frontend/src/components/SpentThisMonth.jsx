@@ -1,6 +1,8 @@
 import { formatMonth } from '../dates.js'
+import { insightText, insightTrend } from '../insight.js'
 import { formatRupees } from '../money.js'
 import { shiftMonth } from '../months.js'
+import { TrendIcon } from './icons.jsx'
 
 /**
  * The highlight box at the top of the page (specs/frontend-spec.md, "Spent
@@ -14,6 +16,9 @@ function SpentThisMonth({ month, currentMonth, data, status, earliestMonth, onMo
   let amount
   if (data !== null) amount = formatRupees(data.total_spent_paise)
   else amount = status === 'loading' ? 'Loading...' : 'Rs –'
+  // Left out while loading, on an error, or if the insight can't be read.
+  const insight = data !== null ? insightText(data.insight, month) : null
+  const trend = data !== null ? insightTrend(data.insight) : null
 
   return (
     <section className="card spent-box" aria-labelledby="spent-label">
@@ -39,6 +44,12 @@ function SpentThisMonth({ month, currentMonth, data, status, earliestMonth, onMo
         </div>
       </div>
       <p className="spent-amount">{amount}</p>
+      {insight !== null && (
+        <p className="spent-insight">
+          {trend !== null && <TrendIcon trend={trend} />}
+          {insight}
+        </p>
+      )}
       {/* Other months are named in the label, so only the current month gets this line. */}
       {isCurrent && data !== null && <p className="spent-month">{formatMonth(month)}</p>}
     </section>
