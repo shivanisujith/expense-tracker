@@ -1,11 +1,9 @@
 """Choosing a month: the filtered expense list, the months list, and the
 total for one month (goal-spec criteria 17 and 19)."""
 
-import sqlite3
-
 import pytest
 
-from conftest import make_expense
+from conftest import insert_expense_row, make_expense
 
 BAD_MONTHS = ["2026-9", "2026-13", "2026-00", "September", "2026-09-01", "202609", " 2026-09", ""]
 
@@ -65,13 +63,7 @@ def test_list_for_a_future_month_is_empty_not_refused(client):
 
 def test_list_counts_expenses_by_date_not_when_they_were_saved(client, db_path):
     add(client, 100, "2026-10-02")
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.execute(
-            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-            " VALUES (200, 1, '2026-09-23', '', '2026-10-13T10:00:00+00:00')"
-        )
-    conn.close()
+    insert_expense_row(amount_paise=200, date="2026-09-23", created_at="2026-10-13T10:00:00+00:00")
 
     october = client.get("/api/expenses", params={"month": "2026-10"}).json()
     september = client.get("/api/expenses", params={"month": "2026-09"}).json()
@@ -142,13 +134,7 @@ def test_month_total_is_the_exact_sum_of_that_months_expenses(client):
 
 def test_month_total_counts_by_expense_date_not_when_it_was_saved(client, db_path):
     add(client, 9210, "2026-10-02")
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.execute(
-            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-            " VALUES (200, 1, '2026-09-23', '', '2026-10-13T10:00:00+00:00')"
-        )
-    conn.close()
+    insert_expense_row(amount_paise=200, date="2026-09-23", created_at="2026-10-13T10:00:00+00:00")
 
     assert client.get("/api/months/2026-09/total").json()["total_spent_paise"] == 200
     assert client.get("/api/months/2026-10/total").json()["total_spent_paise"] == 9210

@@ -8,6 +8,10 @@ from fastapi.testclient import TestClient
 
 from app import migration
 from app.main import app
+from conftest import POSTGRES
+
+# The upgrade only ever applies to an old SQLite file on the laptop.
+pytestmark = pytest.mark.skipif(POSTGRES, reason="only for the local SQLite file")
 
 # The tables exactly as they were before categories could be managed
 # (backend/app/db.py before this change).

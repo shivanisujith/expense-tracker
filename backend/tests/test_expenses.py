@@ -1,11 +1,10 @@
-import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app import db
 from app.main import app
-from conftest import make_expense
+from conftest import count_expense_rows, make_expense
 
 AMOUNT_ERROR = {
     "code": "invalid_amount",
@@ -47,11 +46,8 @@ def test_added_expense_survives_app_restart(client, db_path):
     """Criterion 1 (backend part): saved data is still there after a restart."""
     created = client.post("/api/expenses", json=make_expense()).json()
 
-    # Read the file with a brand-new database connection.
-    conn = sqlite3.connect(db_path)
-    count = conn.execute("SELECT COUNT(*) FROM expenses").fetchone()[0]
-    conn.close()
-    assert count == 1
+    # Read the database with a brand-new connection.
+    assert count_expense_rows() == 1
 
     # Start the app again and list expenses.
     with TestClient(app) as restarted:

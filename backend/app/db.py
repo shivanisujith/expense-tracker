@@ -1,6 +1,16 @@
+"""The database: SQLite on the laptop and in tests, PostgreSQL online.
+
+Which one is used depends on the DATABASE_URL setting (specs/backend-spec.md,
+"Data stored" and "Settings"). Both get the same tables and rules, and the
+rest of the backend talks to either through the same small Connection.
+"""
+
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
+
+import psycopg
 
 from app import migration
 from app.validation import STARTING_CATEGORIES
@@ -32,18 +42,102 @@ CREATE TABLE category_limits (
 );
 """
 
+# The same tables in PostgreSQL. Identity ids are never reused, BIGINT holds
+# whole paise, and the index makes names unique ignoring capitals.
+POSTGRES_TABLES = """
+CREATE TABLE categories (
+    id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name TEXT   NOT NULL CHECK (char_length(name) BETWEEN 1 AND 30)
+);
+CREATE UNIQUE INDEX categories_name_ignoring_capitals ON categories (lower(name));
+
+CREATE TABLE expenses (
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    amount_paise BIGINT NOT NULL CHECK (amount_paise > 0),
+    category_id  BIGINT NOT NULL REFERENCES categories (id),
+    date         TEXT   NOT NULL,
+    note         TEXT   NOT NULL DEFAULT '',
+    created_at   TEXT   NOT NULL
+);
+
+CREATE TABLE category_limits (
+    category_id BIGINT PRIMARY KEY REFERENCES categories (id),
+    limit_paise BIGINT NOT NULL CHECK (limit_paise > 0)
+);
+"""
+
+
+def get_database_url() -> str | None:
+    """Set online (a secret, kept in Render's settings). Unset means SQLite."""
+    return os.environ.get("DATABASE_URL") or None
+
 
 def get_db_path() -> str:
     """Tests point EXPENSES_DB_PATH at a temporary file."""
     return os.environ.get("EXPENSES_DB_PATH", str(DEFAULT_DB_PATH))
 
 
-def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(get_db_path())
-    conn.row_factory = sqlite3.Row
+class Row:
+    """A PostgreSQL row readable like sqlite3.Row: row["name"] or row[0]."""
+
+    def __init__(self, names: list[str], values: tuple):
+        self._names = names
+        self._values = values
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            return self._values[self._names.index(key)]
+        return self._values[key]
+
+    def keys(self) -> list[str]:
+        return list(self._names)
+
+
+def _row_factory(cursor):
+    names = [column.name for column in cursor.description or []]
+    return lambda values: Row(names, values)
+
+
+class Connection:
+    """One connection to either database. SQL is written with `?` for
+    values, as SQLite expects; for PostgreSQL it becomes `%s`."""
+
+    def __init__(self, raw, is_postgres: bool):
+        self._raw = raw
+        self.is_postgres = is_postgres
+
+    def execute(self, sql: str, params=()):
+        if self.is_postgres:
+            # With no values, psycopg also allows several statements at once.
+            return self._raw.execute(sql.replace("?", "%s"), params or None)
+        return self._raw.execute(sql, params)
+
+    @contextmanager
+    def transaction(self):
+        """Everything inside happens together, or not at all."""
+        if self.is_postgres:
+            with self._raw.transaction():
+                yield
+        else:
+            with self._raw:
+                yield
+
+    def close(self) -> None:
+        self._raw.close()
+
+
+def connect() -> Connection:
+    url = get_database_url()
+    if url:
+        # autocommit: each statement on its own is saved straight away, and
+        # transaction() groups several into one all-or-nothing change.
+        raw = psycopg.connect(url, autocommit=True, row_factory=_row_factory)
+        return Connection(raw, is_postgres=True)
+    raw = sqlite3.connect(get_db_path())
+    raw.row_factory = sqlite3.Row
     # SQLite only checks REFERENCES rules when this is switched on.
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    raw.execute("PRAGMA foreign_keys = ON")
+    return Connection(raw, is_postgres=False)
 
 
 def starting_categories_sql() -> str:
@@ -52,7 +146,10 @@ def starting_categories_sql() -> str:
 
 
 def init_db() -> None:
-    """Brings the database file to the current format when the app starts."""
+    """Brings the database to the current format when the app starts."""
+    if get_database_url():
+        _init_postgres()
+        return
     path = get_db_path()
     state = migration.database_state(path)
     if state == "empty":
@@ -76,6 +173,21 @@ def _create_new_database(path: str) -> None:
         conn.close()
 
 
-def category_ids(conn: sqlite3.Connection) -> dict[str, int]:
+def _init_postgres() -> None:
+    """An empty online database gets the tables and the six starting
+    categories in one step. One that has them already is left alone, so
+    restarts and redeploys keep every row."""
+    conn = connect()
+    try:
+        with conn.transaction():
+            exists = conn.execute("SELECT to_regclass('public.categories') IS NOT NULL").fetchone()[0]
+            if not exists:
+                conn.execute(POSTGRES_TABLES)
+                conn.execute(starting_categories_sql())
+    finally:
+        conn.close()
+
+
+def category_ids(conn: Connection) -> dict[str, int]:
     """Current category names mapped to their ids."""
     return {row["name"]: row["id"] for row in conn.execute("SELECT id, name FROM categories")}

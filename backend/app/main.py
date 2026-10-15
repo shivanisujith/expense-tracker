@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -61,9 +62,16 @@ async def handle_unexpected_error(request: Request, call_next):
         return JSONResponse(status_code=error.status_code, content=error.to_body())
 
 
+def allowed_origins() -> list[str]:
+    """Page addresses allowed to use the backend (CORS), from ALLOWED_ORIGINS:
+    the GitHub Pages site online, the local dev server by default."""
+    setting = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173")
+    return [origin.strip() for origin in setting.split(",") if origin.strip()]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins(),
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type"],
 )
@@ -112,10 +120,10 @@ def add_expense(body: Any = Body(None, examples=[EXPENSE_EXAMPLE])):
     conn = db.connect()
     try:
         expense = validate_expense(body, db.category_ids(conn))
-        with conn:
-            cursor = conn.execute(
+        with conn.transaction():
+            new_id = conn.execute(
                 "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-                " VALUES (?, ?, ?, ?, ?)",
+                " VALUES (?, ?, ?, ?, ?) RETURNING id",
                 (
                     expense["amount_paise"],
                     expense["category_id"],
@@ -123,8 +131,8 @@ def add_expense(body: Any = Body(None, examples=[EXPENSE_EXAMPLE])):
                     expense["note"],
                     datetime.now(timezone.utc).isoformat(),
                 ),
-            )
-        row = fetch_expense(conn, cursor.lastrowid)
+            ).fetchone()["id"]
+        row = fetch_expense(conn, new_id)
     finally:
         conn.close()
     return expense_to_dict(row)
@@ -142,7 +150,7 @@ def edit_expense(expense_id: int, body: Any = Body(None, examples=[EXPENSE_EXAMP
         if conn.execute("SELECT 1 FROM expenses WHERE id = ?", (expense_id,)).fetchone() is None:
             raise expense_not_found()
         expense = validate_expense(body, db.category_ids(conn))
-        with conn:
+        with conn.transaction():
             conn.execute(
                 "UPDATE expenses SET amount_paise = ?, category_id = ?, date = ?, note = ?"
                 " WHERE id = ?",
@@ -164,7 +172,7 @@ def edit_expense(expense_id: int, body: Any = Body(None, examples=[EXPENSE_EXAMP
 def delete_expense(expense_id: int):
     conn = db.connect()
     try:
-        with conn:
+        with conn.transaction():
             cursor = conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     finally:
         conn.close()
@@ -181,7 +189,8 @@ def is_over_limit(spent_paise: int, limit_paise: int | None) -> bool:
 def month_total(conn, month: str) -> int:
     """Everything spent in a month, by expense date, whatever the category."""
     return conn.execute(
-        "SELECT COALESCE(SUM(amount_paise), 0) FROM expenses WHERE substr(date, 1, 7) = ?",
+        "SELECT CAST(COALESCE(SUM(amount_paise), 0) AS BIGINT) FROM expenses"
+        " WHERE substr(date, 1, 7) = ?",
         (month,),
     ).fetchone()[0]
 
@@ -216,7 +225,7 @@ def get_summary():
     try:
         category_rows = conn.execute("SELECT id, name FROM categories ORDER BY id").fetchall()
         spent_rows = conn.execute(
-            "SELECT category_id, SUM(amount_paise) AS spent FROM expenses"
+            "SELECT category_id, CAST(SUM(amount_paise) AS BIGINT) AS spent FROM expenses"
             " WHERE substr(date, 1, 7) = ? GROUP BY category_id",
             (month,),
         ).fetchall()
@@ -262,7 +271,7 @@ def set_limit(category_id: int, body: Any = Body(None, examples=[LIMIT_EXAMPLE])
         if category is None:
             raise category_not_found()
         limit_paise = validate_limit(body)
-        with conn:
+        with conn.transaction():
             conn.execute(
                 "INSERT INTO category_limits (category_id, limit_paise) VALUES (?, ?)"
                 " ON CONFLICT (category_id) DO UPDATE SET limit_paise = excluded.limit_paise",
@@ -285,11 +294,13 @@ def add_category(body: Any = Body(None, examples=[CATEGORY_EXAMPLE])):
         name = validate_category_name(body, categories)
         if len(categories) >= MAX_CATEGORIES:
             raise ApiError(422, "too_many_categories", "You can have at most 20 categories.")
-        with conn:
-            cursor = conn.execute("INSERT INTO categories (name) VALUES (?)", (name,))
+        with conn.transaction():
+            new_id = conn.execute(
+                "INSERT INTO categories (name) VALUES (?) RETURNING id", (name,)
+            ).fetchone()["id"]
     finally:
         conn.close()
-    return {"id": cursor.lastrowid, "name": name}
+    return {"id": new_id, "name": name}
 
 
 @app.put("/api/categories/{category_id}")
@@ -300,7 +311,7 @@ def rename_category(category_id: int, body: Any = Body(None, examples=[CATEGORY_
             raise category_not_found()
         name = validate_category_name(body, all_categories(conn), own_id=category_id)
         # Expenses and the limit point to the id, so they stay with the category.
-        with conn:
+        with conn.transaction():
             conn.execute("UPDATE categories SET name = ? WHERE id = ?", (name, category_id))
     finally:
         conn.close()
@@ -326,7 +337,7 @@ def delete_category(category_id: int):
         ).fetchone()[0]
         if expense_count > 0:
             raise category_in_use(category["name"], expense_count)
-        with conn:
+        with conn.transaction():
             conn.execute("DELETE FROM category_limits WHERE category_id = ?", (category_id,))
             conn.execute("DELETE FROM categories WHERE id = ?", (category_id,))
     finally:

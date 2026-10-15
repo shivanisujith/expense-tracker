@@ -2,3 +2,5 @@ fastapi==0.142.2
 uvicorn==0.54.0
 pytest==9.1.1
 httpx2==2.13.1
+psycopg[binary]==3.3.6
+tzdata==2026.5

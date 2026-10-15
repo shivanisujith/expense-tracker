@@ -1,8 +1,6 @@
-import sqlite3
-
 import pytest
 
-from conftest import make_expense
+from conftest import insert_expense_row, make_expense
 
 CATEGORY_ORDER = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]
 
@@ -71,13 +69,7 @@ def test_spent_excludes_other_months(client, db_path):
     add(client, amount_paise=4000, date="2025-10-15")  # same month, last year
 
     # The API refuses future dates, so put a next-month row in directly.
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.execute(
-            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-            " VALUES (8000, 1, '2026-11-01', '', '2026-10-07T00:00:00')"
-        )
-    conn.close()
+    insert_expense_row(amount_paise=8000, date="2026-11-01", created_at="2026-10-07T00:00:00")
 
     assert summary_row(client, "Food")["spent_paise"] == 1000
 
@@ -107,13 +99,7 @@ def test_total_spent_excludes_other_months(client, db_path):
     add(client, category="Bills", amount_paise=2500, date="2026-10-07")
     add(client, amount_paise=2000, date="2026-09-30")  # last month
     add(client, category="Bills", amount_paise=4000, date="2025-10-15")  # same month, last year
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.execute(
-            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-            " VALUES (8000, 1, '2026-11-01', '', '2026-10-07T00:00:00')"
-        )
-    conn.close()
+    insert_expense_row(amount_paise=8000, date="2026-11-01", created_at="2026-10-07T00:00:00")
 
     assert total_spent(client) == 1000 + 2500
 
@@ -125,13 +111,7 @@ def test_total_counts_by_expense_date_not_when_it_was_saved(client, db_path):
     add(client, amount_paise=200, date="2026-09-23")
     # The same again, written straight into the database with an October
     # "saved at" time, to be sure only the date matters.
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.execute(
-            "INSERT INTO expenses (amount_paise, category_id, date, note, created_at)"
-            " VALUES (200, 1, '2026-09-23', '', '2026-10-13T09:00:00+00:00')"
-        )
-    conn.close()
+    insert_expense_row(amount_paise=200, date="2026-09-23", created_at="2026-10-13T09:00:00+00:00")
 
     summary = client.get("/api/summary").json()
 
