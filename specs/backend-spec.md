@@ -6,8 +6,18 @@ goal spec, the goal spec wins. Exact requests and responses are in
 
 ## Plain-language terms
 - **Backend:** the FastAPI program that checks, saves, and adds up the data.
-- **Database / SQLite:** a single file on disk where data is kept, so it
-  survives restarts and page reloads.
+- **Database:** where data is kept, so it survives restarts and page
+  reloads.
+  - **SQLite:** a database that is a single file on disk. Used on the
+    laptop and in local tests.
+  - **PostgreSQL:** a database that runs as its own server. Used online,
+    hosted by Neon.
+- **Environment variable:** a named setting the host gives the backend
+  when it starts, such as `DATABASE_URL`. Secrets (like the database
+  password) are kept there, never in the code.
+- **CORS:** the browser rule that a page from one address may only read
+  answers from a backend at another address if that backend allows the
+  page's address.
 - **Table:** like one sheet in a spreadsheet: rows of records, each with
   the same columns.
 - **Paise:** money stored as a whole number of paise (Rs 12.50 = 1250), so
@@ -20,6 +30,18 @@ goal spec, the goal spec wins. Exact requests and responses are in
   the current format, keeping all of its data.
 
 ## Data stored
+
+The backend uses **SQLite** when no `DATABASE_URL` is set (on the laptop
+and in tests), and **PostgreSQL** when it is (online). Both have the same
+three tables and follow every rule in this spec in the same way:
+- Money columns hold whole paise: `INTEGER` in SQLite, `BIGINT` (a whole
+  number up to about 9.2 × 10¹⁸) in PostgreSQL. Every sum is returned as
+  a whole number of paise, never a decimal or floating-point number.
+- Ids are never reused in either database, even after a row is deleted.
+- Category names are unique, ignoring capital letters, in both. (The
+  backend also checks this itself, rule 14.)
+- Every reference from an expense or limit to a category is checked by
+  the database in both.
 
 ### Table: categories
 One row per category.
@@ -192,7 +214,15 @@ For each current category, always all of them, in category order:
 All sums use whole paise only, so they are exact. The summary is also how
 the frontend gets the current list of categories.
 
+## Starting an empty online database
+When the backend starts with `DATABASE_URL` set and the PostgreSQL
+database has no tables yet, it creates the three tables and the six
+starting categories, in one all-or-nothing step. If the tables already
+exist, it changes nothing, so restarts and redeploys keep all data.
+
 ## Upgrading an existing database (migration)
+This applies only to SQLite files on the laptop. The online PostgreSQL
+database always starts in the current format.
 Databases created before categories could be managed store each expense's
 and limit's category as one of the six fixed names, and only allow those
 six names. When the backend starts:
@@ -220,6 +250,17 @@ six names. When the backend starts:
       fails, the database is left exactly as it was.
 - Backup files are `.db` files, so git ignores them like the main
   database file.
+
+## Settings (environment variables)
+| Name | Used for | Local default | Online value |
+|---|---|---|---|
+| `DATABASE_URL` | Which PostgreSQL database to use. **Secret:** it contains the database password. | not set, so SQLite is used | Neon's connection string, kept only in Render's settings |
+| `EXPENSES_DB_PATH` | Which SQLite file to use (tests use temporary files) | `backend/expenses.db` | not used |
+| `ALLOWED_ORIGINS` | Which page addresses may use the backend (CORS), separated by commas | `http://localhost:5173` | `https://shivanisujith.github.io` |
+
+- Secrets are never written in code, commits, or test files.
+- "Today" and "this month" are still worked out in IST on an online
+  server whose own clock is set to UTC.
 
 ## Errors the backend can return
 | Situation                                  | Kind of error   |

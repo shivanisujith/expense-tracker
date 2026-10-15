@@ -21,6 +21,25 @@ in `specs/backend-spec.md`. How the frontend uses them is in
   - 422 Unprocessable: your input broke a rule; nothing was saved.
   - 500 Server Error: something went wrong inside the backend.
 
+## Addresses
+- **On the laptop:** `http://localhost:8000/api`
+- **Online:** `https://<render-name>.onrender.com/api` (the exact address
+  is given by Render when the backend is created).
+
+Everything in this contract is the same at both addresses.
+
+## Which pages may use the backend (CORS)
+Browsers only let a page read the backend's answers if the backend allows
+that page's address. The backend allows:
+- On the laptop: `http://localhost:5173`.
+- Online: `https://shivanisujith.github.io` (the GitHub Pages site).
+
+This comes from the `ALLOWED_ORIGINS` setting (see
+`specs/backend-spec.md`). Requests from other pages are not refused by the
+backend, but the browser hides the answers from them. This is not a
+security protection: the app has no login, so anyone can still use the
+API directly (see "Known Limitations" in `specs/goal-spec.md`).
+
 ## General rules
 - All endpoints start with `/api`.
 - All bodies are JSON.
@@ -344,5 +363,10 @@ current month it equals the summary's `total_spent_paise`.
 ## When the backend can't be reached
 If the backend is stopped or unreachable, there is no response at all, so
 there is no status code or error object. The frontend must treat "no
-response within 10 seconds" or "connection failed" as **can't reach the
+response within 90 seconds" or "connection failed" as **can't reach the
 server** (see `specs/frontend-spec.md`).
+
+The wait is 90 seconds, not less, because the online backend runs on a
+free plan that sleeps after 15 minutes without visitors and takes about a
+minute to wake up. A stopped backend usually fails straight away
+("connection failed"), so it doesn't take 90 seconds to notice.

@@ -8,13 +8,26 @@ also manage their own list of categories: add new ones, rename them, and
 delete ones they no longer use.
 
 ## Technology
-- Chosen: React frontend, FastAPI backend, SQLite database.
+- Chosen: React frontend, FastAPI backend.
+  - Database: SQLite on the laptop (a single file), and PostgreSQL online.
+    Both use the same tables and rules, and money is whole paise in both.
+- Deployed online, so anyone with the link can use it:
+  - Frontend: GitHub Pages, at
+    https://shivanisujith.github.io/expense-tracker/.
+  - Backend: Render (free plan).
+  - Database: PostgreSQL hosted by Neon (free plan). Render's free disk is
+    wiped on every restart and redeploy, so the data can't live in a
+    SQLite file there. Render's own free PostgreSQL was rejected because
+    it is deleted 30 days after it is created.
+  - GitHub Actions runs every backend and frontend test on every push, and
+    deploys only when they all pass.
 - Weighed against: a plain spreadsheet. Rejected because a spreadsheet
   cannot refuse invalid entries (such as a negative amount) or warn when a
   category goes over its limit, and this course is about building and
   testing a real web application.
-- Would revisit if: several people need to use it at the same time online,
-  in which case we would switch SQLite to PostgreSQL.
+- Would revisit if: the app needs logins or more than a course demo's
+  traffic, in which case we would move to paid plans that don't sleep and
+  that keep backups.
 
 ## Constraints
 - Money is stored exactly, as whole paise (Rs 12.50 is stored as 1250),
@@ -149,17 +162,39 @@ delete ones they no longer use.
     message, and nothing is saved. Exactly Rs 10,00,00,000.00 is
     accepted.
     -- decided by: automated test.
+22. The public site works end to end (the expense, limit, category, and
+    month features, and the "Can't reach the server" message), its data
+    survives a backend restart and redeploy, and it is deployed only when
+    every backend and frontend test has passed.
+    -- decided by: CI run (GitHub Actions), plus a manual browser check on
+    the public site.
+
+## Known Limitations
+- **No login.** The online app has no accounts or passwords. Anyone with
+  the link can see, add, change, and delete all of its data, and everyone
+  shares the same data. This is acceptable for a course demo only; real
+  personal spending should not be entered online.
+- **The free server sleeps.** After 15 minutes with no visitors, the
+  backend sleeps, and the next visit takes about a minute while it wakes
+  up.
+- **Separate data.** The online app starts with an empty database (just
+  the six starting categories). Data on the laptop and data online are
+  separate, and neither is copied to the other.
+- **No backups** are set up on the free plans.
+- **Free-plan limits:** the online database holds at most 0.5 GB.
 
 ## Output Files
 - backend/: the FastAPI application, database models, and tests.
 - frontend/: the React screens.
 - specs/: the specification files. These must not be changed by the agent
   unless explicitly asked.
+- .github/workflows/: the GitHub Actions workflow that tests and deploys
+  the app.
 - The exact file structure is to be proposed in the implementation plan
   and reviewed before any code is written.
 
 ## Out of Scope
-- Logins and multiple users (one person per copy of the app).
+- Logins and multiple users (one person per copy of the app; the online demo is one shared copy).
 - Currencies other than Indian rupees.
 - Charts and graphs. (Exception: a simple progress bar on each category card, showing how much of its limit is used, is allowed.)
 - Bank or UPI connections.

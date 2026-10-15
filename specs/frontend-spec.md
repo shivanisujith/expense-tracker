@@ -22,6 +22,17 @@ frontend checks below are only for convenience.
   appears inside the box where the change was made, for a few seconds,
   then disappears by itself.
 
+## Where the page runs
+- **On the laptop:** `npm run dev` serves it at `http://localhost:5173`,
+  and it talks to the backend at `http://localhost:8000/api`.
+- **Online:** GitHub Pages serves it at
+  `https://shivanisujith.github.io/expense-tracker/` (so all of its files
+  live under `/expense-tracker/`), and it talks to the backend on Render.
+- The backend's address is a **build setting** (`VITE_API_BASE`), chosen
+  when the page is built: GitHub Actions sets it to the Render address for
+  the online build. When it isn't set, the laptop address is used. It is
+  not a secret: anyone can see it in the page's code.
+
 ## Screen layout
 The app is **one page** laid out as a dashboard, with these parts:
 
@@ -165,6 +176,15 @@ section 3). Adding, renaming, and deleting categories happens in the
     It uses the page subtitle plum.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
+- **Waking note:** the online backend sleeps when nobody has used it for a
+  while, and takes about a minute to wake up. If the page's first load
+  (the cards, list, months, and Spent this month total) is still waiting
+  after **5 seconds**, a small note appears under the subtitle, in the
+  secondary muted plum: "Waking up the server, this can take up to a
+  minute..." It is not red, because nothing has gone wrong. It
+  disappears as soon as the first load finishes, whether it succeeds or
+  not, and does not appear for later reloads. Screen readers announce it
+  politely.
 
 ### Spent this month box
 - A cream box, styled like the other boxes, across the full width of the
@@ -589,8 +609,8 @@ the backend.
 ## 6. Can't reach the server (goal-spec acceptance criterion 8)
 
 **When it applies:** any request to the backend gets no response, either
-because the connection fails or because nothing comes back within 10
-seconds. This covers loading the page, adding, editing, deleting,
+because the connection fails or because nothing comes back within 90
+seconds (long enough for the sleeping online backend to wake up). This covers loading the page, adding, editing, deleting,
 setting limits, and adding, renaming, or deleting categories.
 
 **What the user sees:**
@@ -611,6 +631,9 @@ banner disappears. If the server still can't be reached, the banner stays.
 **Manual check:** stop the backend, open or reload the page, and confirm
 the banner shows instead of a blank page. Start the backend, click
 **Try again**, and confirm the banner disappears and the data loads.
+- On the laptop: stop the backend with Ctrl+C, then start it again.
+- Online: in Render, click **Suspend** on the backend service, then
+  **Resume** it.
 
 ---
 
