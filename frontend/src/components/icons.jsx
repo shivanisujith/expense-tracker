@@ -74,3 +74,47 @@ export function TrendIcon({ trend }) {
     </svg>
   )
 }
+
+// Category icons: simple line drawings, 24 x 24, in the circle's icon colour.
+const CATEGORY_PATHS = {
+  // Fork (three tines) and knife.
+  food: 'M5 3v5a3 3 0 0 0 6 0V3M8 3v18M18 21V3c-2 1.5-3 4-3 8h3',
+  // Bus with windows and wheels.
+  transport: 'M6 4h12a2 2 0 0 1 2 2v11H4V6a2 2 0 0 1 2-2zM4 11h16M8 17v2M16 17v2M8 14h.01M16 14h.01',
+  // Shopping bag with handles.
+  shopping: 'M5 8h14l-1.2 12H6.2L5 8zM9 8V6a3 3 0 0 1 6 0v2',
+  // Receipt with a zigzag bottom and two lines.
+  bills: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6',
+  // Ticket with notches and a dashed tear line.
+  entertainment: 'M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6zM14 6v2M14 11v2M14 16v2',
+  // Three dots.
+  other: 'M6 12h.01M12 12h.01M18 12h.01',
+  // Price tag (the default for categories you create).
+  tag: 'M3 12V4h8l10 10-8 8-10-10zM7.5 7.5h.01',
+}
+
+/** A category's icon in its soft circle. Decorative: the name is always shown next to it. */
+export function CategoryIcon({ icon, colours }) {
+  // Dots and the tag's hole are drawn as zero-length lines; a thicker
+  // stroke makes them visible dots.
+  const dotWidth = icon === 'other' ? 3.5 : 2
+  return (
+    <span
+      className="category-icon"
+      data-icon={icon}
+      aria-hidden="true"
+      style={{ backgroundColor: colours.circle, color: colours.icon }}
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
+        <path
+          d={CATEGORY_PATHS[icon]}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={dotWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+}

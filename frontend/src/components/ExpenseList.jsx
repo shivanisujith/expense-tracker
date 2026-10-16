@@ -3,6 +3,7 @@ import { deleteExpense } from '../api.js'
 import { formatDate, formatMonth } from '../dates.js'
 import { formatRupees } from '../money.js'
 import { ALL_MONTHS } from '../months.js'
+import CategoryIconFor from './CategoryIconFor.jsx'
 import { BinIcon, IconButton, PencilIcon } from './icons.jsx'
 import SuccessMessage from './SuccessMessage.jsx'
 
@@ -148,7 +149,10 @@ function ExpenseItem({
     <li className="expense-item">
       <div className="expense-row">
         <span className="expense-date">{formatDate(expense.date)}</span>
-        <span className="expense-category">{expense.category}</span>
+        <span className="expense-category">
+          <CategoryIconFor categoryId={expense.category_id} />
+          {expense.category}
+        </span>
         <span className="expense-note">{expense.note}</span>
         <span className="expense-amount">{formatRupees(expense.amount_paise)}</span>
         <div className="item-buttons">

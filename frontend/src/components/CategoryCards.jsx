@@ -8,6 +8,7 @@ import {
   paiseToRupeesText,
   parseRupees,
 } from '../money.js'
+import CategoryIconFor from './CategoryIconFor.jsx'
 import SuccessMessage from './SuccessMessage.jsx'
 
 // status: 'loading' | 'loaded' | 'error' | 'unreachable'
@@ -74,7 +75,10 @@ function CategoryCard({ row, editing, success, onEdit, onClose, onLimitSaved, on
   return (
     <li className={row.over_limit ? 'card category-card over-limit' : 'card category-card'}>
       <div className="category-card-top">
-        <h3 className="category-name">{row.category}</h3>
+        <div className="category-title">
+          <CategoryIconFor categoryId={row.category_id} />
+          <h3 className="category-name">{row.category}</h3>
+        </div>
         {!editing && (
           <button type="button" className="secondary small" onClick={onEdit}>
             {hasLimit ? 'Change limit' : 'Set limit'}

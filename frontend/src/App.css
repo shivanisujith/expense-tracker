@@ -211,6 +211,25 @@ button.danger-solid:hover:not(:disabled) {
   gap: 8px;
 }
 
+/* Icon and name together, on the left of the card's top line */
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* A category's icon in its soft circle (colours come from categoryIcons.js) */
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
 .category-name {
   margin: 0;
   font-size: 1rem;
@@ -392,6 +411,9 @@ button.danger-solid:hover:not(:disabled) {
 }
 
 .expense-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   overflow-wrap: anywhere;
 }
 

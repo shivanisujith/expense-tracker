@@ -95,3 +95,16 @@ test('"All months" with no expenses keeps the first-expense message', () => {
   renderList([], 'loaded', { month: 'all' })
   expect(screen.getByText('No expenses yet. Add your first one above.')).toBeTruthy()
 })
+
+// --- Category icons on rows ---
+
+test('each expense row shows its category icon, by category id', () => {
+  const { container } = renderList([
+    { id: 2, amount_paise: 500, category: 'Groceries', category_id: 1, date: '2026-10-07', note: '' },
+    { id: 1, amount_paise: 900, category: 'Pets', category_id: 7, date: '2026-10-06', note: 'Food' },
+  ])
+
+  const icons = [...container.querySelectorAll('.expense-item .category-icon')]
+  expect(icons.map((icon) => icon.dataset.icon)).toEqual(['food', 'tag'])
+  expect(icons.every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true)
+})
