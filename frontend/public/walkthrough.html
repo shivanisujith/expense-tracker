@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Expense Tracker Walkthrough</title>
+<meta name="description" content="A plain-language, end-to-end walkthrough of how the Expense Tracker is built, deployed and tested." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+<style>
+/* The app's own colours, copied from frontend/src/App.css and
+   specs/frontend-spec.md ("Colours and contrast"). */
+:root {
+  color-scheme: light;
+  --page: #fbe4ec;        /* baby pink */
+  --box: #f8f1e3;         /* soft cream */
+  --surface: #fdf9f0;     /* lighter cream */
+  --text: #3d2133;        /* deep plum */
+  --subtitle: #553047;    /* plum */
+  --muted: #6a5260;       /* muted plum */
+  --border: #e2d5c3;
+  --accent: #4f6f52;      /* deep sage */
+  --accent-hover: #3f5a42;
+  --accent-text: #fdf9f0;
+  --track: #e3eae0;       /* light sage */
+  --highlight: #eef3ec;
+  --tint-pink: #f6dce6;
+  --tint-beige: #efe3cf;
+  --brown: #5c4033;
+  --danger: #b91c1c;
+  --danger-background: #fbd5d5;
+  --danger-border: #dc2626;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--text);
+  background: var(--page);
+  line-height: 1.6;
+  font-size: 16px;
+}
+a { color: var(--accent); font-weight: 600; }
+a:hover { color: var(--accent-hover); }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.05em 0.35em;
+  overflow-wrap: anywhere;
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+/* Header */
+header.hero { padding: 40px 0 8px; }
+header.hero h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.15; }
+header.hero .sub { color: var(--subtitle); font-size: 1.1rem; margin: 8px 0 18px; max-width: 46em; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent); color: var(--accent-text);
+  border: 0; border-radius: 10px; padding: 10px 16px;
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn:hover { background: var(--accent-hover); color: var(--accent-text); }
+.btn.light { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+.btn.light:hover { background: var(--highlight); color: var(--accent-hover); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.95rem; margin: 6px 0 4px; }
+nav.toc a { font-weight: 500; }
+
+/* Boxes */
+section.box {
+  background: var(--box);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px clamp(16px, 3vw, 32px);
+  margin: 22px 0;
+}
+section.box > h2 { margin: 0 0 6px; font-size: 1.5rem; }
+h3 { font-size: 1.15rem; margin: 22px 0 6px; }
+h4 { font-size: 1rem; margin: 18px 0 4px; }
+.lead { color: var(--muted); margin-top: 0; }
+p { margin: 0 0 12px; }
+ul, ol { padding-left: 1.3em; margin: 0 0 12px; }
+li { margin: 4px 0; }
+
+/* Source labels: recorded vs inferred */
+.src {
+  display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
+  border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; white-space: nowrap;
+}
+.src.rec { background: var(--track); color: var(--accent-hover); }
+.src.inf { background: var(--tint-beige); color: var(--brown); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.92rem; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.legend .src { margin-left: 0; margin-right: 4px; }
+
+/* Glossary terms: click to see the plain-language meaning */
+.t {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0;
+  border-bottom: 2px dotted var(--accent); cursor: help; text-align: inherit;
+}
+.t:hover, .t[aria-expanded="true"] { background: var(--highlight); }
+.t:focus-visible, .part-node:focus-visible, .btn:focus-visible, summary:focus-visible, .tab:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+#term-pop {
+  position: absolute; z-index: 20; max-width: min(340px, calc(100vw - 32px));
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px;
+  box-shadow: 0 6px 24px rgb(61 33 51 / 0.18); font-size: 0.93rem; line-height: 1.5;
+}
+#term-pop strong { display: block; margin-bottom: 2px; }
+#term-pop[hidden] { display: none; }
+
+/* Diagram */
+.diagram-scroll { overflow-x: auto; margin: 10px -4px 0; padding: 4px; }
+.diagram-scroll svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.part-node { cursor: pointer; }
+.part-node rect { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; transition: fill .15s, stroke .15s; }
+.part-node:hover rect { fill: var(--highlight); stroke: var(--accent); }
+.part-node.selected rect { fill: var(--track); stroke: var(--accent); stroke-width: 3; }
+.part-node.lit rect { stroke: var(--accent); stroke-width: 3; }
+.node-plain rect { fill: var(--tint-pink); stroke: var(--border); stroke-width: 1.5; }
+.node-plain.lit rect { stroke: var(--accent); stroke-width: 3; }
+.n-title { font: 700 17px Inter, system-ui, sans-serif; fill: var(--text); }
+.n-sub { font: 400 13px Inter, system-ui, sans-serif; fill: var(--muted); }
+.n-hint { font: 600 11px Inter, system-ui, sans-serif; fill: var(--accent); }
+.arrow { stroke: var(--muted); stroke-width: 2; fill: none; }
+.arrow.dashed { stroke-dasharray: 6 5; }
+.arrow.lit { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 10 6; animation: flow 0.8s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -16; } }
+@media (prefers-reduced-motion: reduce) { .arrow.lit { animation: none; } html { scroll-behavior: auto; } }
+.a-label { font: 500 12.5px Inter, system-ui, sans-serif; fill: var(--muted); }
+.a-label.lit { fill: var(--accent-hover); font-weight: 700; }
+#arrowhead path, #arrowhead-lit path { stroke: none; }
+
+.tour {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin-top: 12px;
+}
+.tour .caption { flex: 1 1 280px; min-height: 3em; }
+.tour .caption b { color: var(--accent-hover); }
+.tour-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+.tab {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 999px; padding: 7px 14px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+}
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.part-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px clamp(14px, 3vw, 26px); margin-top: 12px;
+}
+.part-panel h3 { margin-top: 0; font-size: 1.3rem; }
+.part-panel h4 { color: var(--accent-hover); }
+.placeholder { color: var(--muted); font-style: italic; }
+.gotcha { background: var(--tint-beige); border-radius: 8px; padding: 2px 6px; }
+
+/* Interview questions */
+.qa { border: 1px solid var(--border); border-radius: 10px; background: var(--box); margin: 8px 0; }
+.qa summary { cursor: pointer; padding: 10px 14px; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::before { content: "Q"; flex: 0 0 auto; display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%; background: var(--tint-pink); color: var(--subtitle); font-size: 0.8rem; }
+.qa[open] summary::before { content: "A"; background: var(--track); color: var(--accent-hover); }
+.qa summary .reveal { margin-left: auto; color: var(--accent); font-size: 0.85rem; white-space: nowrap; }
+.qa[open] summary .reveal { visibility: hidden; }
+.qa .answer { padding: 0 14px 12px 48px; }
+
+/* Journeys */
+.journey { counter-reset: step; list-style: none; padding: 0; margin: 10px 0 0; }
+.journey > li {
+  counter-increment: step; position: relative; padding: 2px 0 14px 46px; margin: 0;
+  border-left: 2px solid var(--track); margin-left: 15px;
+}
+.journey > li:last-child { border-left-color: transparent; }
+.journey > li::before {
+  content: counter(step); position: absolute; left: -16px; top: 0;
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-text); font-weight: 700; font-size: 0.9rem;
+}
+.journey > li.bad::before { background: var(--danger); }
+.where { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 999px; padding: 1px 9px; margin-right: 6px; vertical-align: 1px; }
+.w-browser { background: var(--tint-pink); color: var(--subtitle); }
+.w-render { background: var(--track); color: var(--accent-hover); }
+.w-neon { background: var(--tint-beige); color: var(--brown); }
+.w-pages { background: var(--highlight); color: var(--accent-hover); border: 1px solid var(--track); }
+.journey details { margin-top: 4px; }
+.journey details summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.92rem; }
+.journey details > div { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: 0.95rem; }
+.scenario { font-weight: 700; color: var(--subtitle); margin: 18px 0 4px; }
+.alert-demo {
+  background: var(--danger-background); color: var(--danger); border: 1px solid var(--danger-border);
+  border-radius: 8px; padding: 6px 10px; font-weight: 600; display: inline-block; font-size: 0.92rem;
+}
+
+/* Generic grids and tables */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.card h4 { margin-top: 0; }
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+.limit { border-left: 4px solid var(--danger-border); background: var(--surface); border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 10px 0; }
+.limit.inferred { border-left-color: var(--brown); }
+.limit h4 { margin: 0 0 4px; }
+
+dl.glossary { display: grid; grid-template-columns: minmax(130px, 200px) 1fr; gap: 6px 16px; margin: 0; }
+dl.glossary dt { font-weight: 700; }
+dl.glossary dd { margin: 0; color: var(--text); }
+@media (max-width: 560px) {
+  dl.glossary { grid-template-columns: 1fr; }
+  dl.glossary dd { margin-bottom: 8px; }
+  .qa .answer { padding-left: 14px; }
+}
+footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <h1>How the Expense Tracker works</h1>
+  <p class="sub">An end-to-end walkthrough for someone who has never built a website: the parts, how they talk, why they were chosen, and what to say if someone asks you about it.</p>
+  <div class="links">
+    <a class="btn" href="https://shivanisujith.github.io/expense-tracker/">Open the live app</a>
+    <a class="btn light" href="https://github.com/shivanisujith/expense-tracker">See the code on GitHub</a>
+  </div>
+  <div class="legend" role="note">
+    <span><span class="src rec">Recorded</span> the reason is written down in the specs, code comments or commit messages.</span>
+    <span><span class="src rec">Recorded: build sessions</span> what happened while building it, from the person who built it (not visible in git).</span>
+    <span><span class="src inf">My inference</span> a reasonable explanation I worked out, but nobody wrote it down.</span>
+    <span><span class="t" data-t="term">Dotted words</span> can be clicked for a plain-language meaning.</span>
+  </div>
+  <nav class="toc" aria-label="Sections">
+    <a href="#big-picture">The big picture</a>
+    <a href="#parts">The four parts</a>
+    <a href="#journey-add">Journey 1: adding an expense</a>
+    <a href="#journey-down">Journey 2: server unreachable</a>
+    <a href="#built">How this was built</a>
+    <a href="#limits">Known limitations</a>
+    <a href="#glossary">Glossary</a>
+  </nav>
+</header>
+
+<!-- ============================================================ -->
+<section class="box" id="big-picture">
+  <h2>The big picture</h2>
+  <p class="lead">What the app does, in one sentence, and the four places it lives.</p>
+  <p>The app lets one person record everyday expenses by category, set a monthly limit for each category, and see whether they are staying within it <span class="src rec">goal-spec</span>. It looks like one web page, but behind it are separate pieces that run in different places on the internet.</p>
+  <p>The basic idea behind almost every website: the part you see is the <button class="t" data-t="frontend">frontend</button>, and it runs inside your <button class="t" data-t="browser">browser</button>. The part that checks rules and keeps data is the <button class="t" data-t="backend">backend</button>, a program running on a <button class="t" data-t="server">server</button>. The backend stores everything in a <button class="t" data-t="database">database</button>. They talk by sending <button class="t" data-t="request">requests</button> and <button class="t" data-t="response">responses</button> over the internet.</p>
+
+  <div class="diagram-scroll">
+  <svg viewBox="0 0 900 400" role="group" aria-labelledby="diagram-title diagram-desc">
+    <title id="diagram-title">How the parts of the Expense Tracker connect</title>
+    <desc id="diagram-desc">Top row: the GitHub repository sends every push to GitHub Actions, which deploys to GitHub Pages if all tests pass. GitHub Pages gives the page files to your browser. Bottom row: your browser sends API requests to the backend on Render, which sends SQL to the database on Neon. Render gets new code from the GitHub repository through a manual deploy.</desc>
+    <defs>
+      <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#6a5260"/>
+      </marker>
+      <marker id="arrowhead-lit" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#4f6f52"/>
+      </marker>
+    </defs>
+
+    <!-- arrows -->
+    <line id="ar-push" class="arrow" x1="222" y1="82" x2="346" y2="82" marker-end="url(#arrowhead)"/>
+    <text id="lb-push" class="a-label" x="284" y="72" text-anchor="middle">every push</text>
+
+    <line id="ar-deploy" class="arrow" x1="552" y1="82" x2="676" y2="82" marker-end="url(#arrowhead)"/>
+    <text id="lb-deploy" class="a-label" x="614" y="66" text-anchor="middle">deploy, only if</text>
+    <text id="lb-deploy2" class="a-label" x="614" y="104" text-anchor="middle">all tests pass</text>
+
+    <line id="ar-files" class="arrow" x1="780" y1="128" x2="780" y2="266" marker-start="url(#arrowhead)" marker-end="url(#arrowhead)"/>
+    <text id="lb-files" class="a-label" x="792" y="192">① page files</text>
+    <text class="a-label" x="792" y="208">(HTML, JS, CSS)</text>
+
+    <line id="ar-api" class="arrow" x1="676" y1="312" x2="554" y2="312" marker-start="url(#arrowhead)" marker-end="url(#arrowhead)"/>
+    <text id="lb-api" class="a-label" x="615" y="300" text-anchor="middle">② API request</text>
+    <text class="a-label" x="615" y="334" text-anchor="middle">JSON over HTTPS</text>
+
+    <line id="ar-sql" class="arrow" x1="346" y1="312" x2="224" y2="312" marker-start="url(#arrowhead)" marker-end="url(#arrowhead)"/>
+    <text id="lb-sql" class="a-label" x="285" y="300" text-anchor="middle">③ SQL</text>
+    <text class="a-label" x="285" y="334" text-anchor="middle">query</text>
+
+    <line id="ar-render" class="arrow dashed" x1="200" y1="128" x2="390" y2="264" marker-end="url(#arrowhead)"/>
+    <text id="lb-render" class="a-label" x="236" y="214" transform="rotate(35.6 236 214)">new code (manual deploy)</text>
+
+    <!-- nodes -->
+    <g class="node-plain" id="node-repo">
+      <rect x="20" y="40" width="200" height="84" rx="12"/>
+      <text class="n-title" x="120" y="76" text-anchor="middle">GitHub repo</text>
+      <text class="n-sub" x="120" y="98" text-anchor="middle">the code, specs, history</text>
+    </g>
+    <g class="part-node" id="node-actions" data-part="actions" tabindex="0" role="button" aria-label="GitHub Actions: show details">
+      <rect x="350" y="40" width="200" height="84" rx="12"/>
+      <text class="n-title" x="450" y="72" text-anchor="middle">GitHub Actions</text>
+      <text class="n-sub" x="450" y="93" text-anchor="middle">tests, then deploys</text>
+      <text class="n-hint" x="450" y="113" text-anchor="middle">click for details</text>
+    </g>
+    <g class="part-node" id="node-pages" data-part="pages" tabindex="0" role="button" aria-label="GitHub Pages: show details">
+      <rect x="680" y="40" width="200" height="84" rx="12"/>
+      <text class="n-title" x="780" y="72" text-anchor="middle">GitHub Pages</text>
+      <text class="n-sub" x="780" y="93" text-anchor="middle">hands out the page</text>
+      <text class="n-hint" x="780" y="113" text-anchor="middle">click for details</text>
+    </g>
+    <g class="part-node" id="node-neon" data-part="neon" tabindex="0" role="button" aria-label="Neon database: show details">
+      <rect x="20" y="270" width="200" height="84" rx="12"/>
+      <text class="n-title" x="120" y="302" text-anchor="middle">Neon</text>
+      <text class="n-sub" x="120" y="323" text-anchor="middle">PostgreSQL database</text>
+      <text class="n-hint" x="120" y="343" text-anchor="middle">click for details</text>
+    </g>
+    <g class="part-node" id="node-render" data-part="render" tabindex="0" role="button" aria-label="Render backend: show details">
+      <rect x="350" y="270" width="200" height="84" rx="12"/>
+      <text class="n-title" x="450" y="302" text-anchor="middle">Render</text>
+      <text class="n-sub" x="450" y="323" text-anchor="middle">FastAPI backend</text>
+      <text class="n-hint" x="450" y="343" text-anchor="middle">click for details</text>
+    </g>
+    <g class="node-plain" id="node-browser">
+      <rect x="680" y="270" width="200" height="84" rx="12"/>
+      <text class="n-title" x="780" y="306" text-anchor="middle">Your browser</text>
+      <text class="n-sub" x="780" y="328" text-anchor="middle">runs the React page</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="tour" aria-live="polite">
+    <div class="caption" id="tour-caption">Press <b>Play a request</b> to watch how one visit travels between the parts, or <b>Play a code change</b> to see how new code goes live.</div>
+    <div class="tour-buttons">
+      <button class="btn" type="button" id="tour-visit">Play a request</button>
+      <button class="btn light" type="button" id="tour-code">Play a code change</button>
+      <button class="btn light" type="button" id="tour-back" disabled>Back</button>
+      <button class="btn light" type="button" id="tour-next" disabled>Next</button>
+    </div>
+  </div>
+
+  <h3>In words</h3>
+  <ol>
+    <li><strong>Getting the page.</strong> When you open the link, your browser downloads the page's files from <button class="t" data-t="pages">GitHub Pages</button>. From then on, the page runs inside your browser.</li>
+    <li><strong>Asking for data.</strong> The page sends requests to the backend on <button class="t" data-t="render">Render</button>, using the <button class="t" data-t="api">API</button>: an agreed list of <button class="t" data-t="endpoint">endpoints</button> such as <code>/api/expenses</code>, with data written as <button class="t" data-t="json">JSON</button>.</li>
+    <li><strong>Reading and saving.</strong> The backend checks the request against the rules, then asks the <button class="t" data-t="postgresql">PostgreSQL</button> database on <button class="t" data-t="neon">Neon</button> for data, or saves to it, using <button class="t" data-t="sql">SQL</button>.</li>
+    <li><strong>The answer comes back</strong> the same way: database → backend → page, which then updates what you see.</li>
+    <li><strong>Changing the code.</strong> Separately, every time code is <button class="t" data-t="push">pushed</button> to the GitHub <button class="t" data-t="repo">repository</button>, <button class="t" data-t="actions">GitHub Actions</button> runs every <button class="t" data-t="test">automated test</button> and <button class="t" data-t="deploy">deploys</button> the new page only if they all pass. The backend on Render is updated from the same repository, but in practice that took a manual deploy (see Render's gotchas).</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="parts">
+  <h2>The four parts, one by one</h2>
+  <p class="lead">Click a box in the picture above, or a button below. Each part has what it does, why it's needed, the design decisions, the alternatives, the gotchas, and three interview questions.</p>
+  <div class="tabs" role="tablist" aria-label="Parts">
+    <button class="tab" role="tab" type="button" data-part="pages" aria-selected="false" aria-controls="part-pages" id="tab-pages">GitHub Pages: the page</button>
+    <button class="tab" role="tab" type="button" data-part="render" aria-selected="false" aria-controls="part-render" id="tab-render">Render: the backend</button>
+    <button class="tab" role="tab" type="button" data-part="neon" aria-selected="false" aria-controls="part-neon" id="tab-neon">Neon: the database</button>
+    <button class="tab" role="tab" type="button" data-part="actions" aria-selected="false" aria-controls="part-actions" id="tab-actions">GitHub Actions: tests and deploys</button>
+  </div>
+
+  <div class="part-panel" id="part-none">
+    <p class="placeholder">Nothing chosen yet. Pick a part above.</p>
+  </div>
+
+  <!-- ---------------- GitHub Pages ---------------- -->
+  <div class="part-panel" id="part-pages" role="tabpanel" aria-labelledby="tab-pages" hidden>
+    <h3>GitHub Pages: the page you see</h3>
+
+    <h4>What it does</h4>
+    <p>GitHub Pages is GitHub's free hosting for <button class="t" data-t="static">static</button> websites. It hands out the files that make up the page (HTML for the structure, CSS for the look, <button class="t" data-t="javascript">JavaScript</button> for the behaviour) at <a href="https://shivanisujith.github.io/expense-tracker/">shivanisujith.github.io/expense-tracker</a>. It runs no code of its own: once your browser has the files, all the work happens in your browser.</p>
+    <p>The page is written with <button class="t" data-t="react">React</button> and turned into those files by <button class="t" data-t="vite">Vite</button> during the <button class="t" data-t="build">build</button>. In your browser it draws the dashboard, runs the convenience checks on what you type, sends requests to the backend, and shows the answers.</p>
+
+    <h4>Why it's needed</h4>
+    <p>Your browser has to download the page from somewhere public. The goal spec chose GitHub Pages for the frontend <span class="src rec">goal-spec</span>. Free, and it lives right next to the code <span class="src inf">My inference</span>.</p>
+
+    <h4>Design decisions</h4>
+    <ul>
+      <li><strong>The page never adds up money.</strong> Every total, "spent" and "remaining" comes from the backend; the page only formats it <span class="src rec">frontend-spec</span>. One place does the maths, so the cards, the total and the insight line can never disagree.</li>
+      <li><strong>Checks on the page are for convenience only.</strong> The page catches mistakes early (empty amount, date in the future) so you get a quick message, but the backend checks everything again <span class="src rec">goal-spec, Constraints</span>.</li>
+      <li><strong>Money is never a decimal number.</strong> When you type <code>12.50</code>, <code>money.js</code> splits the text at the dot and builds <code>1250</code> <button class="t" data-t="paise">paise</button> with whole numbers. It never multiplies a decimal by 100 <span class="src rec">code comment in money.js</span>, which avoids <button class="t" data-t="float">floating-point</button> rounding errors.</li>
+      <li><strong>The backend's address is a build setting</strong> called <code>VITE_API_BASE</code>. GitHub Actions fills it in with the Render address when it builds the online page; without it the laptop address <code>http://localhost:8000/api</code> is used <span class="src rec">frontend-spec, api.js</span>.</li>
+      <li><strong>The "base path".</strong> GitHub Pages serves this project under <code>/expense-tracker/</code>, so the build tells Vite to put every file there. The laptop version uses <code>/</code> <span class="src rec">vite.config.js</span>.</li>
+      <li><strong>A 90-second wait, and a calm "waking up" note.</strong> See Journey 2 below <span class="src rec">api-contract-spec</span>.</li>
+      <li><strong>Colours with a readability rule.</strong> Pink, cream, plum and sage, where every text colour meets the <button class="t" data-t="wcag">WCAG AA</button> contrast standard, and red is used <em>only</em> for over-limit warnings and errors, so red always means "something's wrong" <span class="src rec">frontend-spec</span>.</li>
+      <li><strong>Popups use the browser's built-in <code>&lt;dialog&gt;</code></strong>, which handles blocking the page behind and the Escape key <span class="src rec">AddExpenseModal.jsx comment</span>. Clicking outside a popup does <em>not</em> close it, so typed details aren't lost by accident <span class="src rec">frontend-spec</span>.</li>
+    </ul>
+
+    <h4>What else could have been used</h4>
+    <ul>
+      <li>Other static hosts such as Netlify, Vercel or Cloudflare Pages: they would work about the same <span class="src inf">My inference</span>.</li>
+      <li>Serving the page from the same Render server as the backend. Then page and backend would share one address, so <button class="t" data-t="cors">CORS</button> wouldn't be needed, but every page visit would also have to wake the sleeping server <span class="src inf">My inference</span>.</li>
+      <li>Plain HTML and JavaScript without React. Fine for a tiny page, but harder to keep tidy with popups, loading states and many boxes updating together <span class="src inf">My inference</span>.</li>
+    </ul>
+
+    <h4>Gotchas</h4>
+    <ul>
+      <li><span class="gotcha">The backend address is baked in when the page is built.</span> If the Render address ever changed, the page would have to be rebuilt. The deploy job stops with a clear error if <code>VITE_API_BASE</code> isn't set <span class="src rec">ci.yml</span>.</li>
+      <li><span class="gotcha">Everything in the page is public.</span> Anyone can read the page's code in their browser, so it must never contain a password. The backend address is not a secret <span class="src rec">frontend-spec</span>.</li>
+      <li><span class="gotcha">Wrong base path = blank page.</span> If the base path were wrong, the browser would look for the files in the wrong folder and the page would load blank <span class="src inf">My inference</span>.</li>
+      <li><span class="gotcha">Two clocks.</span> The date under the title and the "current month" come from <em>your computer's</em> clock (in <button class="t" data-t="ist">IST</button>), while the category cards' month comes from the backend. If your computer's clock is wrong they could disagree. The spec accepts this; the backend still refuses future months <span class="src rec">frontend-spec</span>.</li>
+      <li><span class="gotcha">Files in <code>frontend/public/</code> are copied as they are.</span> That's how this walkthrough page gets published too: Vite copies it into the build without changing it <span class="src inf">My inference, from how Vite treats that folder</span>.</li>
+    </ul>
+
+    <h4>Interview questions</h4>
+    <details class="qa"><summary>Why does the page turn "12.50" into 1250 by handling text, instead of just multiplying by 100?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Computers store most decimal numbers approximately (floating point). For example, in JavaScript <code>0.1 + 0.2</code> gives <code>0.30000000000000004</code>. Multiplying a decimal rupee amount by 100 can leave tiny errors like that, and money totals would then drift. So the page reads the rupees and the paise as two whole numbers and combines them, and everything after that is whole paise. The backend also stores whole paise, so totals are always exact (goal-spec, Constraints).</div></details>
+    <details class="qa"><summary>The page already refuses an amount of 0. Why does the backend check it again?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Because the page isn't the only way in. Anyone can send requests straight to the backend (with a tool like <code>curl</code>, or from the browser's developer tools), skipping the page completely, and there is no login. So the rule is enforced where the data is saved. The page's check only exists to give a quick, friendly message. Acceptance criterion 4 even tests that the backend refuses a bad category "even if the frontend sends it".</div></details>
+    <details class="qa"><summary>Why is the build's base path <code>/expense-tracker/</code>, but <code>/</code> when running on the laptop?<span class="reveal">Show answer</span></summary>
+      <div class="answer">GitHub Pages serves a project's site in a folder named after the repository: <code>shivanisujith.github.io/<strong>expense-tracker</strong>/</code>. The page's files must say they live there, or the browser will look for them at the top of the site and find nothing. On the laptop, <code>npm run dev</code> serves the page at the top level (<code>localhost:5173/</code>), so it uses <code>/</code>. <code>vite.config.js</code> picks the right one depending on whether it is building or running the dev server.</div></details>
+  </div>
+
+  <!-- ---------------- Render ---------------- -->
+  <div class="part-panel" id="part-render" role="tabpanel" aria-labelledby="tab-render" hidden>
+    <h3>Render: the backend</h3>
+
+    <h4>What it does</h4>
+    <p>Render is a hosting company that runs programs on its servers. Here it runs the backend: a <button class="t" data-t="python">Python</button> program built with <button class="t" data-t="fastapi">FastAPI</button> (the code is in <code>backend/app/</code>). For every request it:</p>
+    <ol>
+      <li>checks that the page asking is allowed (<button class="t" data-t="cors">CORS</button>),</li>
+      <li>checks the input against the rules (<button class="t" data-t="validation">validation</button>, in <code>validation.py</code>),</li>
+      <li>reads or writes the database,</li>
+      <li>adds up totals, works out who is over their limit and builds the "insight" line,</li>
+      <li>answers in JSON with a <button class="t" data-t="status">status code</button>: 200/201 if it worked, 422 if the input broke a rule, 404 if the thing doesn't exist, 500 if something broke.</li>
+    </ol>
+    <p>There are 11 endpoints, all listed in <code>specs/api-contract-spec.md</code>, for example <code>POST /api/expenses</code> (add), <code>GET /api/summary</code> (this month's cards) and <code>GET /api/months/2026-09/total</code>.</p>
+
+    <h4>Why it's needed</h4>
+    <ul>
+      <li>The data has to be shared and kept somewhere other than your browser, so it survives reloads and works from any device <span class="src rec">goal-spec, criterion 1</span>.</li>
+      <li>The rules must be enforced somewhere the user can't skip <span class="src rec">goal-spec, Constraints</span>.</li>
+      <li>The database password must stay secret. A program on a server can hold it; a page in your browser can't <span class="src rec">backend-spec, Settings</span>.</li>
+    </ul>
+
+    <h4>Design decisions</h4>
+    <ul>
+      <li><strong>React frontend, FastAPI backend</strong> was the chosen stack <span class="src rec">goal-spec</span>. It was weighed against a plain spreadsheet and rejected, because a spreadsheet can't refuse a negative amount or warn about a limit, and the course is about building and testing a real web app <span class="src rec">goal-spec</span>.</li>
+      <li><strong>One error shape for everything:</strong> <code>{"error": {"code", "message", "field"}}</code>. The message is plain English, safe to show as it is, and <code>field</code> tells the page which box to put it under <span class="src rec">api-contract-spec</span>.</li>
+      <li><strong>Fixed checking order.</strong> If several fields are wrong, only the first one is reported (amount, then category, then date, then note), so the same bad input always gives the same answer <span class="src rec">api-contract-spec</span>.</li>
+      <li><strong>"Today" is always worked out in India time</strong> (<code>clock.py</code>), even though Render's server clock runs on <button class="t" data-t="utc">UTC</button> <span class="src rec">backend-spec</span>.</li>
+      <li><strong>Crashes still carry CORS headers.</strong> The part that turns unexpected crashes into a 500 answer is placed <em>inside</em> the CORS part, "so the browser can tell 'server error' from 'can't reach server'" <span class="src rec">code comment in main.py</span>.</li>
+      <li><strong>Same code for two databases.</strong> A small wrapper in <code>db.py</code> lets the rest of the backend talk to SQLite (laptop) or PostgreSQL (online) the same way. The <code>DATABASE_URL</code> <button class="t" data-t="envvar">environment variable</button> decides which <span class="src rec">backend-spec, db.py</span>.</li>
+      <li><strong>An upper limit of Rs 10,00,00,000.00</strong> on any amount or limit, added after huge numbers were found to break the totals <span class="src rec">commit 2d71ab5</span>.</li>
+      <li><strong>Requests must say they are JSON</strong> (the <code>Content-Type: application/json</code> label), otherwise they are refused <span class="src rec">api-contract-spec</span>.</li>
+    </ul>
+
+    <h4>What else could have been used</h4>
+    <ul>
+      <li>Other Python frameworks (Flask, Django) or a JavaScript backend (Node with Express) would all work. FastAPI gives automatic request reading and a built-in documentation page at <code>/docs</code> <span class="src inf">My inference</span>.</li>
+      <li>Other hosts (Fly.io, Railway, a rented server), or a paid Render plan that doesn't sleep. The goal spec says it would move to paid plans "if the app needs logins or more than a course demo's traffic" <span class="src rec">goal-spec</span>.</li>
+    </ul>
+
+    <h4>Gotchas</h4>
+    <ul>
+      <li><span class="gotcha">The free server sleeps.</span> After 15 minutes with no visitors it sleeps, and the next visit waits about a minute while it wakes <span class="src rec">goal-spec</span>.</li>
+      <li><span class="gotcha">Its disk is wiped on every restart and redeploy</span>, which is why the data can't live in a SQLite file on Render <span class="src rec">goal-spec</span>.</li>
+      <li><span class="gotcha">CORS is not security.</span> It only stops <em>other web pages</em> from reading the answers in a browser. Anyone can still call the API directly <span class="src rec">api-contract-spec</span>.</li>
+      <li><span class="gotcha">Automatic deploys didn't happen.</span> A comment in <code>ci.yml</code> says "Render deploys the backend only after these checks pass", but in practice Render's auto-deploy never triggered: the backend only updated after a <strong>manual deploy</strong> from Render's dashboard <span class="src rec">Recorded: build sessions</span>. So after pushing backend changes, someone has to remember to deploy them, and the live page and the live backend can briefly be out of step.</li>
+      <li><span class="gotcha">Render's own settings aren't in the repo.</span> The start command, the secret <code>DATABASE_URL</code> and <code>ALLOWED_ORIGINS</code> live in Render's dashboard, so they can't be reviewed from the code <span class="src inf">My inference</span>.</li>
+      <li><span class="gotcha">Check, then act.</span> Some rules are checked and then acted on as two separate steps (for example "fewer than 20 categories?" then "add one"). If two people did this at the exact same moment, both could pass the check. Not tested, and unlikely for a demo <span class="src inf">My inference, from reading main.py</span>.</li>
+    </ul>
+
+    <h4>Interview questions</h4>
+    <details class="qa"><summary>Why does the backend work out "today" in India time instead of just using the server's clock?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Render's server runs on UTC, which is 5½ hours behind India. Between midnight and 5:30 am in India, the server would still think it was yesterday, so an expense dated "today" would be refused as a future date. <code>clock.py</code> asks for the date in the <code>Asia/Kolkata</code> time zone instead. A bonus: the tests swap that one function for a fixed date (7 October 2026), so date rules can be tested reliably.</div></details>
+    <details class="qa"><summary>Someone sends an expense with category "food", but the category is called "Food". What happens, and why?<span class="reveal">Show answer</span></summary>
+      <div class="answer">It is refused with a 422 <code>invalid_category</code> error, and nothing is saved. Expense categories must match a current name exactly, capitals included (backend rule 2), so a typo or a deleted category can never slip in. Category <em>names</em> are compared ignoring capitals for a different reason: so you can't create both "Food" and "food" (rule 14).</div></details>
+    <details class="qa"><summary>Why does it matter that a 500 "server error" still carries CORS headers?<span class="reveal">Show answer</span></summary>
+      <div class="answer">If an answer comes back without the CORS permission headers, the browser hides it from the page entirely, and to the page that looks just like the server not answering at all. The user would see "Can't reach the server" when the real problem was a crash. By placing the crash handler inside the CORS layer, even a 500 gets the headers, so the page can show the correct message: "Something went wrong on the server."</div></details>
+  </div>
+
+  <!-- ---------------- Neon ---------------- -->
+  <div class="part-panel" id="part-neon" role="tabpanel" aria-labelledby="tab-neon" hidden>
+    <h3>Neon: the database</h3>
+
+    <h4>What it does</h4>
+    <p>Neon hosts a <button class="t" data-t="postgresql">PostgreSQL</button> database that holds all the online data in three <button class="t" data-t="table">tables</button>:</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Table</th><th>One row per…</th><th>Columns</th></tr></thead>
+      <tbody>
+        <tr><td><code>categories</code></td><td>category</td><td><code>id</code>, <code>name</code></td></tr>
+        <tr><td><code>expenses</code></td><td>expense</td><td><code>id</code>, <code>amount_paise</code>, <code>category_id</code>, <code>date</code>, <code>note</code>, <code>created_at</code></td></tr>
+        <tr><td><code>category_limits</code></td><td>category with a limit</td><td><code>category_id</code>, <code>limit_paise</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>On the laptop the same tables live in a <button class="t" data-t="sqlite">SQLite</button> file instead, <code>backend/expenses.db</code>, with the same rules <span class="src rec">backend-spec</span>.</p>
+
+    <h4>Why it's needed</h4>
+    <p>The data must survive restarts and redeploys. Render's free disk is wiped every time, so a SQLite file there would lose everything. Render's own free PostgreSQL was rejected because it is deleted 30 days after it's created <span class="src rec">goal-spec</span>.</p>
+
+    <h4>Design decisions</h4>
+    <ul>
+      <li><strong>Money as whole paise</strong> in big whole-number columns (<code>BIGINT</code>), never decimals <span class="src rec">goal-spec, backend-spec</span>.</li>
+      <li><strong>Expenses point to their category by id, not by name.</strong> Renaming "Food" to "Groceries" changes one row in <code>categories</code>, and every expense follows automatically <span class="src rec">backend-spec</span>. Ids are never reused, even after deletion <span class="src rec">backend-spec</span>.</li>
+      <li><strong>The database has its own safety net.</strong> <button class="t" data-t="checkc">CHECK rules</button> (amount &gt; 0, name 1–30 characters), <button class="t" data-t="fk">references</button> (an expense must point at a real category), and a <button class="t" data-t="index">unique index</button> on the lower-case name. The code comment says these are "a last safety net; validation.py gives the real errors" <span class="src rec">db.py</span>.</li>
+      <li><strong>Set up once, then left alone.</strong> When the backend starts and the database is empty, it creates the tables and the six starting categories in one all-or-nothing <button class="t" data-t="transaction">transaction</button>. If the tables exist, it changes nothing, so restarts keep the data <span class="src rec">backend-spec</span>.</li>
+      <li><strong>Sums are forced to whole numbers.</strong> Every <code>SUM</code> is wrapped in <code>CAST(… AS BIGINT)</code> and there's a test called "sums are whole numbers, not decimals" <span class="src rec">commit c8003b1, test_database.py</span>. Why: PostgreSQL returns the sum of big whole numbers as a decimal type, which would reach the page as <code>1250.0</code>-style values <span class="src inf">My inference, from how PostgreSQL works</span>.</li>
+      <li><strong>Safe upgrade for old laptop databases.</strong> When categories became editable, old SQLite files (which stored category names) are converted to the new id format, after first copying the file as a <button class="t" data-t="backup">backup</button>, and the row counts are compared before and after <span class="src rec">backend-spec, commit 46d91f2</span>. That process is called a <button class="t" data-t="migration">migration</button>.</li>
+    </ul>
+
+    <h4>What else could have been used</h4>
+    <ul>
+      <li>Render's free PostgreSQL: rejected, deleted after 30 days <span class="src rec">goal-spec</span>.</li>
+      <li>Supabase or another hosted PostgreSQL; or SQLite on a paid, permanent Render disk <span class="src inf">My inference</span>.</li>
+      <li>Keeping data only in the browser (its local storage). No server needed, but the data would exist on one device only, and the backend couldn't enforce the rules <span class="src inf">My inference</span>.</li>
+    </ul>
+
+    <h4>Gotchas</h4>
+    <ul>
+      <li><span class="gotcha">The <button class="t" data-t="connstr">connection string</button> is a secret</span>, because it contains the database password. It is stored only in Render's settings, never in the code or commits <span class="src rec">backend-spec</span>.</li>
+      <li><span class="gotcha">Tests delete tables</span>, so the test setup refuses to run against any PostgreSQL that isn't on the same computer (<code>localhost</code>), and removes any <code>DATABASE_URL</code> from the environment before each test <span class="src rec">conftest.py</span>.</li>
+      <li><span class="gotcha">Laptop and online data are separate.</span> Neither is copied to the other <span class="src rec">goal-spec</span>.</li>
+      <li><span class="gotcha">Dates are stored as text</span> (<code>"2026-10-07"</code>), and "which month" is found by taking the first 7 characters. It works because this format sorts correctly as text, but the database can't do real date arithmetic on it <span class="src inf">My inference</span>.</li>
+      <li><span class="gotcha">Free plan: 0.5 GB and no backups</span> <span class="src rec">goal-spec</span>.</li>
+    </ul>
+
+    <h4>Interview questions</h4>
+    <details class="qa"><summary>Why store money as whole paise rather than as rupees with decimals?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Whole numbers are exact; decimal numbers in computers often aren't (floating point). If you add many slightly wrong numbers, the total drifts. Storing Rs 12.50 as 1250 paise means every sum is exact, in both databases and on the page. It was a constraint from day one in the goal spec. There's also an upper limit (Rs 10 crore per amount) so totals stay small enough to be exact everywhere, including in the browser.</div></details>
+    <details class="qa"><summary>When "Food" is renamed to "Groceries", why don't the old expenses need updating?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Expenses don't store the name, they store the category's <code>id</code> (Food is id 1). The name lives in one place, the <code>categories</code> table. Renaming changes that single row, and every expense, in every month, shows the new name the next time it's read, because the backend joins the two tables when it answers. The id also lets the starting six keep their icons after a rename.</div></details>
+    <details class="qa"><summary>How do you make sure running the tests can never wipe the real online database?<span class="reveal">Show answer</span></summary>
+      <div class="answer">Three layers in <code>conftest.py</code>: (1) every test gets a fresh temporary SQLite file, or a throwaway PostgreSQL given by <code>TEST_DATABASE_URL</code>; (2) any real <code>DATABASE_URL</code> in the environment is removed before each test; (3) if <code>TEST_DATABASE_URL</code> points anywhere other than <code>localhost</code>, the tests refuse to start. In CI, the PostgreSQL is a temporary one that exists only during that run.</div></details>
+  </div>
+
+  <!-- ---------------- GitHub Actions ---------------- -->
+  <div class="part-panel" id="part-actions" role="tabpanel" aria-labelledby="tab-actions" hidden>
+    <h3>GitHub Actions: tests and deploys</h3>
+
+    <h4>What it does</h4>
+    <p>GitHub Actions is GitHub's built-in robot. The file <code>.github/workflows/ci.yml</code> tells it what to do on every push and pull request. This is called <button class="t" data-t="ci">CI</button>. It runs four jobs:</p>
+    <ol>
+      <li><strong>Backend tests (SQLite):</strong> installs Python 3.14.7 and the packages, runs <button class="t" data-t="pytest">pytest</button>.</li>
+      <li><strong>Backend tests (PostgreSQL):</strong> the same tests again, against a throwaway PostgreSQL 17 started just for this run (a <button class="t" data-t="container">service container</button>).</li>
+      <li><strong>Frontend:</strong> <button class="t" data-t="lint">lint</button> (oxlint), tests (<button class="t" data-t="vitest">Vitest</button>), then a test build.</li>
+      <li><strong>Deploy to GitHub Pages:</strong> only after <em>all three</em> pass, and only for pushes to <code>main</code>. It builds the page with the Render address and publishes it.</li>
+    </ol>
+    <p>The three test jobs run side by side; the deploy waits for them (<code>needs:</code>).</p>
+
+    <h4>Why it's needed</h4>
+    <p>Acceptance criterion 22: the site is "deployed only when every backend and frontend test has passed" <span class="src rec">goal-spec</span>. A robot runs every test every time, so nobody has to remember to.</p>
+
+    <h4>Design decisions</h4>
+    <ul>
+      <li><strong>Backend tests run twice,</strong> once per database, because both must follow every rule the same way <span class="src rec">backend-spec, commit 73d22f8</span>.</li>
+      <li><strong>The throwaway database password is literally "throwaway".</strong> The file says it "guards nothing real; the online database is never used here" <span class="src rec">ci.yml</span>.</li>
+      <li><strong>The Render address is a repository <em>variable</em>, not a secret,</strong> because it ends up visible in the page anyway <span class="src rec">ci.yml, frontend-spec</span>. A first step stops the deploy with a clear message if it's missing <span class="src rec">ci.yml</span>.</li>
+      <li><strong>Minimal permissions:</strong> jobs can only read the code; only the deploy job may write to Pages <span class="src rec">ci.yml</span>. Giving each job the least power it needs is a common safety habit <span class="src inf">My inference</span>.</li>
+      <li><strong>Never two deploys at once</strong>; a newer one waits for the older to finish <span class="src rec">ci.yml comment</span>.</li>
+    </ul>
+
+    <h4>What else could have been used</h4>
+    <ul>
+      <li>Deploying by hand after running tests locally: easy to forget a step <span class="src inf">My inference</span>.</li>
+      <li>Other CI services (GitLab CI, CircleCI) or letting Render and a static host each build on their own. Actions is built into GitHub, where the code already is <span class="src inf">My inference</span>.</li>
+    </ul>
+
+    <h4>Gotchas</h4>
+    <ul>
+      <li><span class="gotcha">Actions only deploys the <em>page</em>.</span> The backend is deployed by Render, from the same repository. The comment in <code>ci.yml</code> expects Render to deploy automatically after the checks pass, but that never triggered; the backend was updated by a manual deploy <span class="src rec">Recorded: build sessions</span>.</li>
+      <li><span class="gotcha">Pull requests are tested but never deployed</span> (<code>if: github.event_name == 'push' &amp;&amp; github.ref == 'refs/heads/main'</code>) <span class="src rec">ci.yml</span>.</li>
+      <li><span class="gotcha">Passing tests isn't the whole check.</span> Criterion 22 also needs a manual check in a browser on the public site <span class="src rec">goal-spec</span>.</li>
+      <li><span class="gotcha">This walkthrough page is deployed by the same job</span>, so it only goes live after all the tests pass, like the app <span class="src inf">My inference</span>.</li>
+    </ul>
+
+    <h4>Interview questions</h4>
+    <details class="qa"><summary>Why do the backend tests run twice in CI?<span class="reveal">Show answer</span></summary>
+      <div class="answer">The laptop uses SQLite and the online app uses PostgreSQL. They behave differently in small ways: how new ids come back, how sums are typed, how capital letters are compared. The spec requires both to follow the same rules, so the same tests run against each. Differences like sums needing a cast to whole numbers only show up on PostgreSQL, so running both is what catches them.</div></details>
+    <details class="qa"><summary>What stops a broken change from reaching the live site?<span class="reveal">Show answer</span></summary>
+      <div class="answer">The deploy job has <code>needs: [backend-sqlite, backend-postgres, frontend]</code>, so it only starts if all three test jobs succeed, and only for pushes to <code>main</code>. If any test, the lint check or the build fails, the old page stays live. This was tested on purpose: a deliberately broken negative-amount rule was pushed on a throwaway branch, and both backend jobs went red. For the backend, the honest answer is "a person": Render's auto-deploy didn't trigger, so the backend is updated by a manual deploy, which should only be done once CI is green. Tests can only catch what they test, so there's also a manual browser check.</div></details>
+    <details class="qa"><summary>Where are the app's secrets kept, and why isn't the backend address one of them?<span class="reveal">Show answer</span></summary>
+      <div class="answer">The real secret is <code>DATABASE_URL</code>, which contains the database password. It lives only in Render's settings and never appears in code, commits or CI. The backend address (<code>VITE_API_BASE</code>) is built into the page, and anyone can read the page's code in their browser, so treating it as a secret would protect nothing. It's stored as a plain repository variable.</div></details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="journey-add">
+  <h2>Journey 1: adding an expense</h2>
+  <p class="lead">You add "Lunch, Rs 12.50, Food, today" on the live site. Here is everything that happens, in order. Open "Under the hood" for the file and function involved.</p>
+  <p><span class="where w-browser">Browser</span><span class="where w-render">Render</span><span class="where w-neon">Neon</span>: these labels show where each step happens.</p>
+
+  <ol class="journey">
+    <li><span class="where w-browser">Browser</span><strong>You click "+ Add expense".</strong> The Add expense popup (a <button class="t" data-t="modal">modal</button>) opens on top of the page, with the cursor in Amount, the date set to today, and Category showing "Choose a category".
+      <details><summary>Under the hood</summary><div><code>App.jsx</code> sets <code>adding</code> to true, which shows <code>AddExpenseModal.jsx</code>; it calls the browser's <code>showModal()</code>. Today's date comes from <code>dates.js</code>, in IST. Nothing has been sent to the backend yet.</div></details></li>
+
+    <li><span class="where w-browser">Browser</span><strong>You fill it in and click "Add expense".</strong> The page runs its convenience checks first. If the amount were empty, 0 or had 3 decimals, a message would appear under that box and <em>nothing would be sent</em>.
+      <details><summary>Under the hood</summary><div><code>checkForm()</code> in <code>expenseForm.js</code>. <code>parseRupees("12.50")</code> in <code>money.js</code> gives <code>1250</code>. The button changes to "Saving..." and is disabled, so you can't send it twice.</div></details></li>
+
+    <li><span class="where w-browser">Browser</span><strong>The page sends a request.</strong> It's a <code>POST</code> to <code>https://…onrender.com/api/expenses</code> with this JSON body:
+      <br><code>{"amount_paise": 1250, "category": "Food", "date": "2026-10-16", "note": "Lunch"}</code>
+      <details><summary>Under the hood</summary><div><code>request()</code> in <code>api.js</code> uses the browser's <button class="t" data-t="fetch">fetch</button>, adds the <code>Content-Type: application/json</code> label, and sets a 90-second <button class="t" data-t="timeout">timeout</button>. The address came from <code>VITE_API_BASE</code> when the page was built.</div></details></li>
+
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>The browser asks permission first (CORS).</strong> The page (from <code>github.io</code>) is talking to a different <button class="t" data-t="origin">origin</button> (<code>onrender.com</code>), and it is sending JSON, so the browser first sends a small <button class="t" data-t="preflight">preflight</button> request asking "may this page send this?". The backend says yes because <code>https://shivanisujith.github.io</code> is in <code>ALLOWED_ORIGINS</code>.
+      <details><summary>Under the hood</summary><div><code>CORSMiddleware</code> in <code>main.py</code> allows the methods GET, POST, PUT, DELETE and the <code>Content-Type</code> header. The browser does the preflight on its own; the app's code never sees it.</div></details></li>
+
+    <li><span class="where w-render">Render</span><strong>If the server was asleep, it wakes up first</strong> (about a minute). When it starts it runs <code>init_db()</code>, which sees the tables already exist and changes nothing.
+      <details><summary>Under the hood</summary><div><code>lifespan()</code> in <code>main.py</code> runs at start-up and calls <code>db.init_db()</code> → <code>_init_postgres()</code>. If the wait goes past 5 seconds, the page shows "Waking up the server…" (Journey 2).</div></details></li>
+
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks every rule again.</strong> It loads the current category names from the database, then checks in a fixed order: amount (a whole number, more than 0, at most Rs 10 crore), category (exactly a current name), date (a real date, not after today in IST), note (100 characters at most, after trimming spaces).
+      <details><summary>Under the hood</summary><div><code>add_expense()</code> in <code>main.py</code> calls <code>validate_expense()</code> in <code>validation.py</code>. The first failure raises an <code>ApiError</code>, sent back as a 422 with the error object, and nothing is saved.</div></details></li>
+
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The expense is saved.</strong> One SQL <code>INSERT</code> inside a transaction; the database gives the new row an id and checks its own safety rules too.
+      <details><summary>Under the hood</summary><div><code>INSERT INTO expenses … RETURNING id</code>. <code>created_at</code> is set to the current time (UTC), used only to order expenses on the same date. Then <code>fetch_expense()</code> reads it back joined with its category name.</div></details></li>
+
+    <li><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>The backend answers "201 Created"</strong> with the saved expense, including its new id and <code>category_id</code>.</li>
+
+    <li><span class="where w-browser">Browser</span><strong>The popup closes and a success message shows.</strong> "✓ Expense added" appears in the Expenses box for about 3 seconds, and the cursor goes back to "+ Add expense".
+      <details><summary>Under the hood</summary><div><code>handleAddSaved()</code> → <code>succeeded()</code> in <code>App.jsx</code>; the message comes from <code>useSuccessMessage()</code> in <code>successMessage.js</code>.</div></details></li>
+
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The page asks for everything again.</strong> It doesn't add 12.50 to the total itself. It sends four requests at once: the expense list (for the month you're viewing), the summary (cards and this month's total), the list of months, and the total for the month shown in the Spent box.
+      <details><summary>Under the hood</summary><div><code>loadAll()</code> in <code>App.jsx</code> uses <code>Promise.all</code> / <code>Promise.allSettled</code> so the four run together. The backend's <code>get_summary()</code> adds up each category with SQL <code>SUM</code> and sets <code>over_limit</code> only when spent is strictly more than the limit.</div></details></li>
+
+    <li><span class="where w-browser">Browser</span><strong>The screen updates.</strong> The new row appears ("Lunch", "Food · Today", Rs 12.50), the Food card's spent and progress bar move, and the total and insight line change. If Food is now over its limit, the card turns red with "Over limit by Rs X", but <strong>the expense is still saved</strong>: going over a limit never blocks saving <span class="src rec">goal-spec</span>.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="journey-down">
+  <h2>Journey 2: when the server can't be reached</h2>
+  <p class="lead">The backend is stopped, asleep, or the network is down. The rule: the page must never be blank or broken, and must say clearly what's wrong <span class="src rec">goal-spec, criterion 8</span>.</p>
+
+  <p class="scenario">Scenario A: you open the page and the backend doesn't answer</p>
+  <ol class="journey">
+    <li><span class="where w-pages">GitHub Pages</span><strong>The page itself still loads.</strong> It comes from GitHub Pages, which is separate from Render, so the title, today's date (from your computer's clock) and the "+ Add expense" button all appear.</li>
+    <li><span class="where w-browser">Browser</span><strong>The page sends its four first requests</strong> and starts a 5-second timer.
+      <details><summary>Under the hood</summary><div>The <code>useEffect</code> in <code>App.jsx</code> starts <code>loadAll()</code> and a <code>setTimeout</code> of 5000 ms.</div></details></li>
+    <li><span class="where w-browser">Browser</span><strong>After 5 seconds with no answer</strong>, a calm note appears under the subtitle: "Waking up the server, this can take up to a minute…". It's muted plum, not red, "because nothing has gone wrong" <span class="src rec">frontend-spec</span>. Screen readers announce it politely.</li>
+    <li class="bad"><span class="where w-browser">Browser</span><strong>Either the server wakes up</strong> (the note disappears, data appears, done), <strong>or the request fails.</strong> A stopped server usually fails at once ("connection failed"). A server that never answers is given up on after 90 seconds.
+      <details><summary>Under the hood</summary><div>In <code>api.js</code>, <em>any</em> error thrown by <code>fetch</code> (connection refused, no network, or the 90-second <code>AbortSignal.timeout</code>) becomes <code>ApiError('unreachable')</code>. A real answer with a 4xx/5xx status becomes a different kind (<code>invalid</code>, <code>not_found</code>, <code>server</code>).</div></details></li>
+    <li class="bad"><span class="where w-browser">Browser</span><strong>A red banner appears</strong> just under the title, with a Try again button:<br>
+      <span class="alert-demo">Can't reach the server. Check that the backend is running, then try again.</span><br>
+      The Spent box shows <code>Rs –</code> (never "NaN"), and anything already loaded stays on screen.
+      <details><summary>Under the hood</summary><div><code>loadAll()</code> collects the four results; if any is <code>'unreachable'</code>, it sets <code>unreachable</code> to true and <code>ServerBanner.jsx</code> shows with <code>role="alert"</code>, so screen readers announce it straight away.</div></details></li>
+    <li><span class="where w-browser">Browser</span><strong>You click Try again.</strong> All four requests are sent again. The banner goes away only if none of them is unreachable.</li>
+  </ol>
+
+  <p class="scenario">Scenario B: the server goes away while you're adding an expense</p>
+  <ol class="journey">
+    <li><span class="where w-browser">Browser</span><strong>You click "Add expense" in the popup</strong>, and the request fails.</li>
+    <li class="bad"><span class="where w-browser">Browser</span><strong>The popup stays open with everything you typed</strong>, shows the "Can't reach the server…" message at its top, and the red banner appears on the page behind it. You can press Add expense again when the server is back.
+      <details><summary>Under the hood</summary><div>The <code>catch</code> in <code>handleSubmit()</code> of <code>AddExpenseModal.jsx</code> checks <code>error.kind === 'unreachable'</code>, sets the top message and calls <code>onUnreachable()</code>. Nothing was saved, so trying again won't create a duplicate.</div></details></li>
+  </ol>
+
+  <h3>Why it's built this way</h3>
+  <ul>
+    <li><strong>90 seconds, not 10.</strong> The wait was originally 10 seconds. When the app went online it was raised to 90 "because the online backend runs on a free plan that sleeps… and takes about a minute to wake up" <span class="src rec">api-contract-spec, commit 738f4a2</span>. With 10 seconds, every first visit after a quiet spell would have shown an error.</li>
+    <li><strong>Three different messages for three different problems:</strong> "can't reach" (no answer at all), "something went wrong on the server" (a 500 answer), and the rule message (a 422). That's why 500 answers must carry CORS headers (see Render's interview questions).</li>
+    <li><strong>How it's tested:</strong> automated tests fake an unreachable server (<code>wakingNote.test.jsx</code>, <code>App.test.jsx</code>). Criterion 8 is also checked by hand: on the laptop by stopping the backend with Ctrl+C, and online by clicking <em>Suspend</em> on the Render service, then <em>Resume</em> <span class="src rec">frontend-spec, section 6</span>.</li>
+  </ul>
+  <p><strong>Gotcha:</strong> a CORS refusal also makes <code>fetch</code> fail without an answer, so a wrong <code>ALLOWED_ORIGINS</code> setting on Render would show up as "Can't reach the server" even though the server is running <span class="src inf">My inference, from api.js</span>.</p>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="built">
+  <h2>How this was built</h2>
+  <p class="lead">From the four spec files and the 44 commits between 7 and 16 October 2026.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>Spec-driven development</h4>
+      <p>Before any code, the goal was written down as a <button class="t" data-t="spec">spec</button> (<code>goal-spec.md</code>, the first commit), then three more detailed specs for the frontend, the backend and the API contract. The goal spec wins any disagreement. It lists 23 <button class="t" data-t="criterion">acceptance criteria</button>, each saying how it is decided: "automated test", "manual browser check", or "CI run" <span class="src rec">goal-spec</span>.</p>
+      <p><code>CLAUDE.md</code>, the instructions for the coding agent, says: read every spec before changing code, <strong>stop and report any conflict instead of guessing</strong>, never edit specs unless asked, and treat the "Out of Scope" list as binding <span class="src rec">CLAUDE.md</span>.</p>
+      <p>The history shows the habit: <strong>17 of the 44 commits change a spec</strong>, and new features usually start with a spec-only commit followed by the code. For example, <em>"Add month arrows and month filter to specs"</em> (2393e15) then <em>"Add month arrows to the Spent box…"</em> (934f5be).</p>
+    </div>
+    <div class="card">
+      <h4>Tests written first</h4>
+      <p>In almost every phase, the new tests were written first and run against the <em>old</em> code, where they <strong>failed</strong>, as they should, because the feature didn't exist yet. Then the change was made, and they <strong>passed</strong> <span class="src rec">Recorded: build sessions</span>. A test that has been seen failing proves it can actually catch the problem.</p>
+      <p>Git can't show this order, because each test and the code it tests were committed together once the phase was approved. The order is known from the build sessions, not from the history.</p>
+      <p><strong>Test counts from the last run</strong> <span class="src rec">Recorded: build sessions</span>:</p>
+      <ul>
+        <li><strong>285</strong> backend tests on SQLite</li>
+        <li><strong>277</strong> backend tests on PostgreSQL, plus <strong>8 skipped</strong>: the migration tests, which only apply to the laptop's SQLite file (<code>test_migration.py</code>)</li>
+        <li><strong>234</strong> frontend tests</li>
+      </ul>
+      <p>Test names read like spec sentences, for example <code>test_a_limit_above_the_maximum_is_refused_and_the_old_limit_kept</code>.</p>
+    </div>
+  </div>
+
+  <h3>Deliberate rule-breaks: breaking the app on purpose</h3>
+  <p>Passing tests only mean something if the tests would <em>fail</em> when the app is wrong. So rules were broken on purpose to prove the tests notice, and then put back <span class="src rec">Recorded: build sessions</span>:</p>
+  <ul>
+    <li><strong>Phase 6:</strong> the negative-amount rule was deliberately broken, so a negative amount would be accepted, and the over-limit rule was changed from "more than the limit" to "at least the limit". The tests caught both, and both rules were restored.</li>
+    <li><strong>Checking that CI catches it too:</strong> a broken negative-amount rule was pushed on a throwaway branch. Both backend jobs (SQLite and PostgreSQL) went red, proving a broken rule can't slip through to a deploy.</li>
+    <li><strong>Many other phases</strong> had their own break-and-restore checks.</li>
+  </ul>
+  <p>This is a simple form of what's sometimes called <button class="t" data-t="mutation">mutation testing</button>.</p>
+
+  <h3>Exceptions written into the rules</h3>
+  <p>The specs also set strict rules and then make a few exceptions on purpose, writing down why:</p>
+  <ul>
+    <li><strong>"No charts", except a progress bar</strong> on each category card <span class="src rec">goal-spec, Out of Scope</span>.</li>
+    <li><strong>"Sage is the only accent colour", except the icon circles</strong>, which use three soft tints taken from the existing palette. Icons are never red, so red always means "over limit" or "error" <span class="src rec">frontend-spec</span>.</li>
+    <li><strong>A public app with no login,</strong> accepted "for a course demo only; real personal spending should not be entered online" <span class="src rec">goal-spec, Known Limitations</span>.</li>
+    <li><strong>The over-limit card's light red is "deliberately stronger than a pale pink"</strong> so it stands out from the creams, not only through its border <span class="src rec">frontend-spec</span>.</li>
+    <li><strong>Python's usual type check is avoided on purpose:</strong> <code>type(value) is not int</code> instead of <code>isinstance</code>, because in Python <code>True</code> and <code>False</code> count as numbers, so <code>{"amount_paise": true}</code> would otherwise sneak through as 1 paisa <span class="src rec">validation.py comment</span>.</li>
+    <li><strong>Tests sometimes bypass the API on purpose:</strong> <code>insert_expense_row()</code> writes straight into the database "skipping the API's checks", for example to store a future date that the API would refuse <span class="src rec">conftest.py</span>.</li>
+    <li><strong>A fake popup for tests:</strong> the test browser (<button class="t" data-t="jsdom">jsdom</button>) has no popup support, so <code>dialogStub.js</code> adds the two methods the app uses <span class="src rec">dialogStub.js</span>.</li>
+  </ul>
+
+  <h3>Real problems found along the way</h3>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Problem</th><th>Fix</th><th>Where it's recorded</th></tr></thead>
+    <tbody>
+      <tr><td>A test server accidentally ran against the real laptop data.</td><td>The data was restored from a personal backup. The test setup in <code>conftest.py</code> keeps tests on their own temporary database and refuses any database that isn't a local throwaway one.</td><td>build sessions; safeguards in <code>conftest.py</code></td></tr>
+      <tr><td>The page showed <code>Rs NaN.NaN</code> ("NaN" is computer for "not a number"). The cause turned out to be a half-reloaded server, not a mistake in the sums.</td><td>The page never shows NaN now: anything that isn't a whole number of paise shows <code>Rs –</code>, and tests check "NaN" never appears.</td><td>build sessions; commit a821608, <code>money.js</code></td></tr>
+      <tr><td>The final check found that huge amounts could crash the summary, because the totals got too big.</td><td>A maximum of Rs 10,00,00,000.00 (10 crore) for amounts and limits, on the backend and the page; a test adds many maximum amounts and checks the sum is still exact.</td><td>build sessions; commit 2d71ab5, <code>test_maximums.py</code></td></tr>
+      <tr><td>Colours that <em>looked</em> fine weren't actually readable enough.</td><td>The contrast checks measured every text and background pair against WCAG AA and caught them; the palette was adjusted until every pair passed, and the measured ratios are in the frontend spec.</td><td>build sessions; frontend-spec, "Colours and contrast"</td></tr>
+      <tr><td>After renaming a category, the add form's old category choice came back.</td><td>The form now clears its choice when the chosen name disappears from the list, so the old name can't return.</td><td>build sessions; commit 61007ce ("Also fixes…"), comment in <code>AddExpenseModal.jsx</code></td></tr>
+      <tr><td>A 10-second wait would treat the sleeping free server as "unreachable".</td><td>90 seconds, plus the "Waking up the server…" note after 5 seconds.</td><td>commits 738f4a2, 540b644</td></tr>
+      <tr><td>Render's free disk is wiped; Render's free PostgreSQL is deleted after 30 days.</td><td>The database moved to Neon; SQLite kept for the laptop.</td><td>goal-spec, commit 738f4a2</td></tr>
+      <tr><td>PostgreSQL differs from SQLite: sums don't come back as whole numbers, new ids are fetched differently, transactions work differently.</td><td><code>CAST(… AS BIGINT)</code>, <code>RETURNING id</code>, <code>conn.transaction()</code>; all backend tests now also run on PostgreSQL.</td><td>commit c8003b1</td></tr>
+      <tr><td>Switching months quickly: a slow answer for an <em>old</em> choice could arrive after the new one and overwrite it.</td><td>Each load checks that its month is still the chosen one, and drops the answer ("stale") if not.</td><td>commit 934f5be, comment in <code>App.jsx</code></td></tr>
+      <tr><td>Requests the backend couldn't read (a note that's a number, an id like <code>abc</code>, JSON without the JSON label).</td><td>All refused with one clear <code>invalid_request</code> error; tests for each.</td><td>commit 2d71ab5, <code>test_request_rules.py</code></td></tr>
+      <tr><td>Changing an old laptop database's format could lose data.</td><td>A backup copy first, an all-or-nothing conversion, and a row-count check before and after.</td><td>commit 46d91f2, <code>test_migration.py</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The design changed its mind, and that's normal</h3>
+  <p>The look was reworked in many small spec-then-code steps: the colours became baby pink and sage, white surfaces became cream, a sage header bar was added (042b885) and then removed again in favour of a title sitting straight on the pink (f482882), pop-up "toasts" moved inside the box where each change happened (ef68456), and the expense table lost its column headings in favour of friendlier two-line rows (48a5361). Each change was written into the spec first, so the spec always describes the app as it is.</p>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="limits">
+  <h2>Known limitations</h2>
+  <p class="lead">Each one is labelled with where it comes from: the goal spec, the build sessions, or my own reading of the code.</p>
+
+  <div class="limit"><h4>No login <span class="src rec">goal-spec</span></h4>
+    <p>Anyone with the link can see, add, change and delete all the data, and everyone shares the same data. Fine for a course demo; real personal spending should not be entered online.</p></div>
+  <div class="limit"><h4>The free server sleeps <span class="src rec">goal-spec</span></h4>
+    <p>After 15 minutes with no visitors, the first visit takes about a minute.</p></div>
+  <div class="limit"><h4>Laptop and online data are separate <span class="src rec">goal-spec</span></h4>
+    <p>The online app started empty (just the six starting categories). Nothing is copied between the two.</p></div>
+  <div class="limit"><h4>No backups <span class="src rec">goal-spec</span></h4>
+    <p>The free plans have no backups set up. If the online data were deleted, it would be gone.</p></div>
+  <div class="limit"><h4>Free-plan size limit <span class="src rec">goal-spec</span></h4>
+    <p>The online database holds at most 0.5 GB.</p></div>
+  <div class="limit"><h4>Backend deploys are manual <span class="src rec">Recorded: build sessions</span></h4>
+    <p>Render's auto-deploy didn't trigger, so backend changes only go live after someone deploys them by hand in Render. GitHub Actions only deploys the page, so the page and backend can briefly be out of step.</p></div>
+
+  <div class="limit inferred"><h4>No protection against abuse <span class="src inf">My inference</span></h4>
+    <p>Nothing limits how many requests someone can send (no rate limiting), so a script could fill the shared demo with junk or delete everything.</p></div>
+  <div class="limit inferred"><h4>Rare clashes between simultaneous users <span class="src inf">My inference</span></h4>
+    <p>Some checks and the change that follows are separate steps. Two people acting at the same instant could, in theory, get past a check like "at most 20 categories". The database's own rules still catch duplicate names and missing categories, but that would show as a "server error" rather than a friendly message.</p></div>
+  <div class="limit inferred"><h4>One limit for every month <span class="src rec">backend-spec</span></h4>
+    <p>A limit can't differ from month to month, and can be changed but not removed (except by deleting its category).</p></div>
+  <div class="limit inferred"><h4>Fixed to India <span class="src rec">goal-spec</span></h4>
+    <p>Rupees only, and "today" is always India time, wherever you are.</p></div>
+  <div class="limit inferred"><h4>No alerts if something breaks <span class="src inf">My inference</span></h4>
+    <p>Errors are written to Render's logs, but nothing tells anyone. Problems are only noticed when someone uses the app.</p></div>
+  <div class="limit inferred"><h4>Needs the internet <span class="src inf">My inference</span></h4>
+    <p>The page can't save anything while offline; it shows the banner and keeps what you typed until the server is back.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section class="box" id="glossary">
+  <h2>Glossary</h2>
+  <p class="lead">Every dotted word on this page, in one place.</p>
+  <dl class="glossary" id="glossary-list"></dl>
+</section>
+
+<footer>
+  Written from <code>specs/</code>, the code and the git history at commit 028b0c6 (16 October 2026). Nothing here changes how the app works.
+  · <a href="https://shivanisujith.github.io/expense-tracker/">Live app</a>
+  · <a href="https://github.com/shivanisujith/expense-tracker">GitHub repo</a>
+</footer>
+</div>
+
+<div id="term-pop" role="dialog" aria-modal="false" hidden></div>
+
+<script>
+// Plain-language meanings for every dotted word.
+const GLOSSARY = {
+  term: ['Dotted word', 'Like this one: click it to see what it means. Click anywhere else, or press Escape, to close.'],
+  frontend: ['Frontend', 'The part of an app you see and click. It runs inside your browser. Here: the React page.'],
+  backend: ['Backend', 'A program running on a server that the page talks to. It checks rules, saves data and works out totals. Here: the FastAPI program on Render.'],
+  browser: ['Browser', 'The app you use to visit websites: Chrome, Safari, Firefox, Edge.'],
+  server: ['Server', 'A computer that stays switched on and connected to the internet, waiting to answer requests.'],
+  database: ['Database', 'Organised storage that keeps data safe between visits and restarts, a bit like a set of spreadsheets that programs read and write.'],
+  request: ['Request', 'A message the browser sends to a server asking for something, such as "give me the expenses" or "save this one".'],
+  response: ['Response', 'The server’s reply to a request: a status code (did it work?) and usually some data.'],
+  api: ['API', 'Application Programming Interface: the agreed list of requests the backend understands and what it answers. Here it is written down in specs/api-contract-spec.md.'],
+  endpoint: ['Endpoint', 'One address in the API that does one job, like /api/expenses (list or add expenses).'],
+  json: ['JSON', 'A simple text format for data, made of names and values: {"amount_paise": 1250, "category": "Food"}.'],
+  status: ['Status code', 'A number in every response saying how it went: 200 OK, 201 Created, 204 done (nothing to send back), 404 not found, 422 your input broke a rule, 500 the server broke.'],
+  react: ['React', 'A popular JavaScript library for building pages out of reusable pieces called components (the popup, the card, the banner…).'],
+  javascript: ['JavaScript', 'The programming language that browsers run. It makes pages interactive.'],
+  vite: ['Vite', 'A tool for building web pages. While developing, it serves the page on your laptop; for publishing, it bundles all the code files into a few small, fast ones.'],
+  build: ['Build', 'Turning the source code you write into the final files a browser downloads.'],
+  static: ['Static site', 'A website whose files are the same for every visitor. The host just hands the files out; it runs no code of its own.'],
+  pages: ['GitHub Pages', 'GitHub’s free hosting for static websites.'],
+  render: ['Render', 'A company that runs your programs on its servers. Its free plan sleeps when nobody uses it.'],
+  neon: ['Neon', 'A company that hosts PostgreSQL databases online.'],
+  repo: ['Repository (repo)', 'A project folder tracked by git, with the full history of every change. This one lives on GitHub.'],
+  push: ['Push', 'Uploading your saved changes (commits) from your laptop to GitHub.'],
+  actions: ['GitHub Actions', 'GitHub’s built-in robot: it runs scripts, like tests and deploys, on GitHub’s computers whenever you push.'],
+  test: ['Automated test', 'A small program that uses your app and checks it behaves as expected, e.g. "adding 0 rupees is refused". Run in seconds, again and again.'],
+  deploy: ['Deploy', 'Putting a new version live, so real visitors get it.'],
+  postgresql: ['PostgreSQL', 'A widely used database that runs as its own server program. Used online, hosted by Neon.'],
+  sqlite: ['SQLite', 'A database that is just a single file, with no separate server. Used on the laptop and in tests.'],
+  sql: ['SQL', 'The language used to talk to a database, e.g. SELECT * FROM expenses WHERE date = ‘2026-10-16’.'],
+  table: ['Table', 'Like one sheet in a spreadsheet: rows of records, each with the same columns.'],
+  python: ['Python', 'A programming language, popular for backends and data work. The backend is written in it.'],
+  fastapi: ['FastAPI', 'A Python library for building backends. You write a function per endpoint; it handles reading requests and sending responses.'],
+  cors: ['CORS', 'Cross-Origin Resource Sharing: a browser rule. A page from one address (origin) can only read answers from a backend at another address if that backend says the page is allowed. It protects browser users, not the backend.'],
+  origin: ['Origin', 'The "home address" of a web page: its scheme and domain, e.g. https://shivanisujith.github.io.'],
+  preflight: ['Preflight', 'A small permission-check request (method OPTIONS) the browser sends on its own, before certain cross-origin requests such as ones carrying JSON.'],
+  validation: ['Validation', 'Checking input against the rules before accepting it, e.g. "amount must be more than 0".'],
+  envvar: ['Environment variable', 'A named setting given to a program when it starts, like DATABASE_URL. Secrets are kept there, never in the code.'],
+  paise: ['Paise', '1 rupee = 100 paise. Storing Rs 12.50 as 1250 paise keeps money in whole numbers, which computers handle exactly.'],
+  float: ['Floating point', 'How computers usually store decimal numbers: fast, but approximate. In JavaScript 0.1 + 0.2 gives 0.30000000000000004.'],
+  ist: ['IST', 'India Standard Time, 5½ hours ahead of UTC.'],
+  utc: ['UTC', 'Coordinated Universal Time: the world’s reference clock. Servers usually run on it.'],
+  wcag: ['WCAG AA', 'Web Content Accessibility Guidelines, level AA: a widely used standard. Among other things, text must contrast with its background by at least 4.5 : 1, so it’s readable.'],
+  modal: ['Modal (popup)', 'A box that opens on top of the page and must be closed before the rest of the page can be used again.'],
+  fetch: ['fetch', 'The browser’s built-in function for sending a request from JavaScript and waiting for the response.'],
+  timeout: ['Timeout', 'A maximum wait. If no answer arrives in time, the request is given up on.'],
+  transaction: ['Transaction', 'A group of database changes that happen all together or not at all, so a failure halfway leaves nothing half-done.'],
+  migration: ['Migration', 'A one-time step that converts an older database to a newer format, keeping all its data.'],
+  backup: ['Backup', 'A copy of data kept somewhere safe, so it can be restored if the original is lost.'],
+  fk: ['Reference (foreign key)', 'A database rule that a value must point at a row that really exists, e.g. an expense’s category_id must be a real category.'],
+  checkc: ['CHECK rule', 'A rule written into a table itself, e.g. amount_paise > 0. The database refuses any row that breaks it.'],
+  index: ['Unique index', 'A lookup structure that makes searching fast. A unique one also forbids duplicates, here duplicate category names (ignoring capitals).'],
+  connstr: ['Connection string', 'The full address of a database, including the username and password needed to get in.'],
+  ci: ['CI (continuous integration)', 'Automatically running all the tests on every change, so problems are caught before they go live.'],
+  pytest: ['pytest', 'The tool that runs the backend’s Python tests.'],
+  vitest: ['Vitest', 'The tool that runs the frontend’s JavaScript tests.'],
+  lint: ['Lint', 'A tool that reads code without running it and flags likely mistakes. Here: oxlint.'],
+  container: ['Service container', 'A throwaway mini computer started just for one CI run, here running PostgreSQL, and deleted afterwards.'],
+  spec: ['Spec (specification)', 'A written description of exactly what the software must do, agreed before the code is written.'],
+  criterion: ['Acceptance criterion', 'One checkable statement that must be true for the work to count as done, e.g. "an amount of 0 is refused".'],
+  mutation: ['Mutation testing', 'Deliberately putting a small bug into working code to check that the tests catch it. If the tests still pass, they aren’t really testing that rule.'],
+  jsdom: ['jsdom', 'A pretend browser that runs inside the test program, so page tests don’t need a real browser.'],
+}
+
+// Glossary list at the bottom, alphabetical.
+const list = document.getElementById('glossary-list')
+Object.entries(GLOSSARY)
+  .filter(([key]) => key !== 'term')
+  .sort((a, b) => a[1][0].localeCompare(b[1][0]))
+  .forEach(([key, [name, meaning]]) => {
+    const dt = document.createElement('dt')
+    dt.id = 'g-' + key
+    dt.textContent = name
+    const dd = document.createElement('dd')
+    dd.textContent = meaning
+    list.append(dt, dd)
+  })
+
+// Clicking a dotted word shows its meaning just below it.
+const pop = document.getElementById('term-pop')
+let openTerm = null
+function closeTerm() {
+  if (!openTerm) return
+  openTerm.setAttribute('aria-expanded', 'false')
+  pop.hidden = true
+  openTerm = null
+}
+document.querySelectorAll('.t').forEach((el) => {
+  el.type = 'button'
+  el.setAttribute('aria-expanded', 'false')
+  el.setAttribute('aria-controls', 'term-pop')
+  el.addEventListener('click', (event) => {
+    event.stopPropagation()
+    if (openTerm === el) return closeTerm()
+    closeTerm()
+    const entry = GLOSSARY[el.dataset.t]
+    if (!entry) return
+    pop.innerHTML = ''
+    const title = document.createElement('strong')
+    title.textContent = entry[0]
+    const text = document.createElement('span')
+    text.textContent = entry[1]
+    pop.append(title, text)
+    pop.hidden = false
+    const box = el.getBoundingClientRect()
+    const width = pop.offsetWidth
+    const left = Math.max(16, Math.min(box.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - width - 16))
+    pop.style.left = left + 'px'
+    pop.style.top = box.bottom + window.scrollY + 6 + 'px'
+    el.setAttribute('aria-expanded', 'true')
+    openTerm = el
+  })
+})
+document.addEventListener('click', (event) => { if (!pop.contains(event.target)) closeTerm() })
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && openTerm) { const el = openTerm; closeTerm(); el.focus() }
+})
+window.addEventListener('resize', closeTerm)
+
+// Choosing a part, from the picture or the buttons.
+const PARTS = ['pages', 'render', 'neon', 'actions']
+function showPart(part, scroll) {
+  document.getElementById('part-none').hidden = true
+  PARTS.forEach((p) => {
+    document.getElementById('part-' + p).hidden = p !== part
+    document.getElementById('tab-' + p).setAttribute('aria-selected', String(p === part))
+    document.getElementById('node-' + p).classList.toggle('selected', p === part)
+  })
+  if (scroll) document.getElementById('parts').scrollIntoView({ block: 'start' })
+}
+document.querySelectorAll('.part-node').forEach((node) => {
+  node.addEventListener('click', () => showPart(node.dataset.part, true))
+  node.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showPart(node.dataset.part, true) }
+  })
+})
+document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showPart(tab.dataset.part, false)))
+
+// The two guided tours through the picture.
+const TOURS = {
+  visit: [
+    { lit: ['ar-files', 'lb-files'], nodes: ['node-browser', 'node-pages'], text: '<b>1.</b> You open the link. Your browser asks GitHub Pages for the page and gets back its files (HTML, CSS, JavaScript). The React page starts running inside your browser.' },
+    { lit: ['ar-api', 'lb-api'], nodes: ['node-browser', 'node-render'], text: '<b>2.</b> The page sends requests to the backend on Render, e.g. GET /api/summary. The browser first checks CORS: is this page allowed to read the answers?' },
+    { lit: ['ar-sql', 'lb-sql'], nodes: ['node-render', 'node-neon'], text: '<b>3.</b> The backend checks the request, then sends SQL to the PostgreSQL database on Neon to read or save rows. The database password never leaves Render.' },
+    { lit: ['ar-sql', 'ar-api', 'lb-api'], nodes: ['node-neon', 'node-render', 'node-browser'], text: '<b>4.</b> The rows come back to the backend, which adds up totals, turns everything into JSON and replies. The page then draws the cards, list and totals.' },
+  ],
+  code: [
+    { lit: ['ar-push', 'lb-push'], nodes: ['node-repo', 'node-actions'], text: '<b>1.</b> New code is pushed to the GitHub repo. GitHub Actions starts the three test jobs side by side: backend on SQLite, backend on PostgreSQL, frontend.' },
+    { lit: ['ar-deploy', 'lb-deploy', 'lb-deploy2'], nodes: ['node-actions', 'node-pages'], text: '<b>2.</b> Only if every test passes (and it is a push to main), the deploy job builds the page with the Render address and publishes it to GitHub Pages.' },
+    { lit: ['ar-render', 'lb-render'], nodes: ['node-repo', 'node-render'], text: '<b>3.</b> Render takes the new backend code from the same repo and restarts the backend. The plan was for this to happen automatically after the checks pass, but auto-deploy never triggered, so in practice it took a manual deploy from Render’s dashboard.' },
+  ],
+}
+let tour = null
+let step = 0
+const caption = document.getElementById('tour-caption')
+const back = document.getElementById('tour-back')
+const next = document.getElementById('tour-next')
+function clearLit() {
+  document.querySelectorAll('.lit').forEach((el) => el.classList.remove('lit'))
+  document.querySelectorAll('.arrow').forEach((el) => {
+    if (el.dataset.ms) el.setAttribute('marker-start', el.dataset.ms)
+    if (el.dataset.me) el.setAttribute('marker-end', el.dataset.me)
+  })
+}
+document.querySelectorAll('.arrow').forEach((el) => {
+  el.dataset.ms = el.getAttribute('marker-start') || ''
+  el.dataset.me = el.getAttribute('marker-end') || ''
+})
+function drawStep() {
+  clearLit()
+  const s = TOURS[tour][step]
+  s.lit.forEach((id) => {
+    const el = document.getElementById(id)
+    el.classList.add('lit')
+    if (el.classList.contains('arrow')) {
+      if (el.dataset.ms) el.setAttribute('marker-start', 'url(#arrowhead-lit)')
+      if (el.dataset.me) el.setAttribute('marker-end', 'url(#arrowhead-lit)')
+    }
+  })
+  s.nodes.forEach((id) => document.getElementById(id).classList.add('lit'))
+  caption.innerHTML = s.text + ' <span style="color:var(--muted)">(' + (step + 1) + ' of ' + TOURS[tour].length + ')</span>'
+  back.disabled = step === 0
+  next.disabled = step === TOURS[tour].length - 1
+}
+function startTour(name) { tour = name; step = 0; drawStep() }
+document.getElementById('tour-visit').addEventListener('click', () => startTour('visit'))
+document.getElementById('tour-code').addEventListener('click', () => startTour('code'))
+back.addEventListener('click', () => { if (step > 0) { step--; drawStep() } })
+next.addEventListener('click', () => { if (step < TOURS[tour].length - 1) { step++; drawStep() } })
+</script>
+</body>
+</html>
