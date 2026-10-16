@@ -66,8 +66,8 @@ popup** (see section 5).
 - Money is shown in rupees with 2 decimals and Indian digit grouping, for
   example `Rs 1,25,000.50`. The frontend converts paise to rupees for
   display only.
-- Dates are shown like `7 Oct 2026`, except in expense rows, which use
-  "Today", "Yesterday", or a short date (see "Expense list").
+- Expense rows show the day as "Today", "Yesterday", or a short date
+  (see "Expense list").
 - Months are shown with the full month name, like `September 2026`.
 - **The current month** for the month arrows and the month choice is
   worked out in IST from the computer's clock, like the date under the
