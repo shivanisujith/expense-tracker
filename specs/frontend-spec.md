@@ -37,9 +37,9 @@ frontend checks below are only for convenience.
   when the page is built: GitHub Actions sets it to the Render address for
   the online build. When it isn't set, the laptop address is used. It is
   not a secret: anyone can see it in the page's code.
-- **Login experiment (laptop only):** started with
+- **Login version on the laptop:** started with
   `VITE_API_BASE=http://localhost:8001/api npm run dev -- --port 5174`,
-  so it is served at `http://localhost:5174` and talks to the experiment
+  so it is served at `http://localhost:5174` and talks to the login
   backend on port 8001, never to a normal server on port 8000.
 
 ## Logging in
@@ -53,6 +53,9 @@ instead of the dashboard:
 - The server banner and the waking note, as on the dashboard.
 - One cream box, about 400 pixels wide and centred, with:
   - A heading: "Log in", or "Create an account".
+  - Only when creating an account, a short warning under the heading, in
+    normal text (not red, which means an error): "This is a demo. Don't
+    use a password you use anywhere else."
   - **Username** and **Password** fields, each with a visible label above
     it. The password is hidden as it is typed.
   - One sage button: **Log in**, or **Create account**.

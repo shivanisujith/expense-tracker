@@ -347,12 +347,13 @@ When the backend starts with `DATABASE_URL` set and the PostgreSQL
 database has no tables yet, it creates the five tables, in one
 all-or-nothing step, with no accounts or categories yet. If the tables
 already exist, it changes nothing, so restarts and redeploys keep all
-data. (In the login experiment this is used only by the tests; an online
-database from before accounts is never upgraded.)
+data. An online database from before accounts is upgraded instead (see
+"Upgrading the online database to accounts").
 
 ## Upgrading an existing database (migration)
 This applies only to SQLite files on the laptop. The online PostgreSQL
-database always starts in the current format.
+database was created after categories could be managed, so it never needs
+this step.
 Databases created before categories could be managed store each expense's
 and limit's category as one of the six fixed names, and only allow those
 six names. When the backend starts:
@@ -383,8 +384,8 @@ six names. When the backend starts:
   database file.
 
 ## Upgrading to accounts (migration)
-This also applies only to SQLite files on the laptop. A database from
-before accounts has categories, expenses, and limits but no `users`
+This section is for SQLite files on the laptop; the online PostgreSQL
+database is covered in the next section. A database from before accounts has categories, expenses, and limits but no `users`
 table. When the backend starts with one:
 
 1. **Back up first.** Copy the database file, unchanged, to a new file
@@ -410,11 +411,37 @@ instead of getting new starting categories, as part of the same
 all-or-nothing sign-up step. After that, no unclaimed data is left, so
 every later account starts with the six starting categories.
 
+## Upgrading the online database to accounts
+When the backend starts with `DATABASE_URL` set and the PostgreSQL
+database has a `categories` table but no `users` table (it is from before
+accounts), it upgrades it once, as one all-or-nothing change: if anything
+fails, the database is left exactly as it was.
+
+1. **No automatic backup.** The backend can't copy an online database, so
+   a backup is made by hand in the Neon dashboard before deploying.
+2. Lock the tables and check again that there is still no `users` table,
+   so two servers starting at the same time can't both upgrade it.
+3. Count the categories, expenses, and limits.
+4. Create the `users` and `sessions` tables.
+5. Add `user_id` to categories, left empty ("unclaimed") for every
+   existing row, and `icon`, set from the id exactly as in the SQLite
+   upgrade (ids 1 to 6 get the starting icons, every other id gets `tag`).
+6. Replace the rule "names are unique ignoring capitals" with "names are
+   unique within one account ignoring capitals".
+7. Check that the counts are unchanged. If not, undo everything and report
+   the error.
+
+Ids, names, amounts, dates, notes, and `created_at` values are never
+changed, and ids are never reused. Unclaimed data then works exactly as
+above: the first account to sign up takes all of it.
+
+If the database already has a `users` table, nothing changes.
+
 ## Settings (environment variables)
 | Name | Used for | Local default | Online value |
 |---|---|---|---|
 | `DATABASE_URL` | Which PostgreSQL database to use. **Secret:** it contains the database password. | not set, so SQLite is used | Neon's connection string, kept only in Render's settings |
-| `EXPENSES_DB_PATH` | Which SQLite file to use (tests use temporary files) | `backend/expenses-login.db` on the `experiment/login` branch, so the real `backend/expenses.db` is never used by mistake | not used |
+| `EXPENSES_DB_PATH` | Which SQLite file to use (tests use temporary files) | `backend/expenses-login.db`, so the real `backend/expenses.db` is never used by mistake | not used |
 | `ALLOWED_ORIGINS` | Which page addresses may use the backend (CORS), separated by commas | `http://localhost:5173` | `https://shivanisujith.github.io` |
 
 - CORS allows the `Authorization` header as well as `Content-Type`.
@@ -440,6 +467,6 @@ are in `specs/api-contract-spec.md`.
 
 ## Out of scope (from the goal spec)
 No password reset, account changes or deletion, email, login-attempt
-limits, or shared data; the login version is never deployed. No other
+limits, or shared data. No other
 currencies, no charts (except the progress bar on each category card), no
 bank/UPI links, no receipts, no exports, no AI features.

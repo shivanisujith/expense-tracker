@@ -82,7 +82,7 @@ CREATE TABLE category_limits (
 
 # The same tables in PostgreSQL. Identity ids are never reused, BIGINT holds
 # whole paise, and the index makes names unique per account ignoring capitals.
-POSTGRES_TABLES = f"""
+POSTGRES_USERS_AND_SESSIONS_TABLES = """
 CREATE TABLE users (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username      TEXT   NOT NULL UNIQUE CHECK (char_length(username) BETWEEN 3 AND 20),
@@ -97,7 +97,9 @@ CREATE TABLE sessions (
     created_at TEXT   NOT NULL,
     expires_at TEXT   NOT NULL
 );
+"""
 
+POSTGRES_TABLES = POSTGRES_USERS_AND_SESSIONS_TABLES + f"""
 CREATE TABLE categories (
     id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT REFERENCES users (id),
@@ -223,15 +225,21 @@ def _create_new_database(path: str) -> None:
         conn.close()
 
 
+def _postgres_has_table(conn: Connection, name: str) -> bool:
+    return conn.execute("SELECT to_regclass(?) IS NOT NULL", (f"public.{name}",)).fetchone()[0]
+
+
 def _init_postgres() -> None:
-    """An empty online database gets the tables in one step. One that has
-    them already is left alone, so restarts and redeploys keep every row."""
+    """An empty online database gets the tables in one step, and one from
+    before accounts is upgraded in one step. One that is current is left
+    alone, so restarts and redeploys keep every row."""
     conn = connect()
     try:
         with conn.transaction():
-            exists = conn.execute("SELECT to_regclass('public.categories') IS NOT NULL").fetchone()[0]
-            if not exists:
+            if not _postgres_has_table(conn, "categories"):
                 conn.execute(POSTGRES_TABLES)
+            elif not _postgres_has_table(conn, "users"):
+                migration.upgrade_postgres_to_accounts(conn, POSTGRES_USERS_AND_SESSIONS_TABLES)
     finally:
         conn.close()
 

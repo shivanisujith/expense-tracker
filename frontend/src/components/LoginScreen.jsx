@@ -108,6 +108,9 @@ function LoginScreen({ message, checkFailed, onRetryCheck, onLoggedIn, trackFirs
       {(unreachable || checkFailed) && <ServerBanner onRetry={retry} retrying={retrying || sending} />}
       <section className="card login-box" aria-labelledby="login-heading">
         <h2 id="login-heading">{words.heading}</h2>
+        {mode === 'signup' && (
+          <p className="login-warning">This is a demo. Don't use a password you use anywhere else.</p>
+        )}
         {topMessage && <p className="form-error login-message">{topMessage}</p>}
         <form onSubmit={handleSubmit} noValidate>
           <div className="modal-fields">

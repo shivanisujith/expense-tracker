@@ -219,6 +219,18 @@ test('the switch changes to "Create an account", clearing messages but keeping w
   expect(loginBox().getByRole('heading', { name: 'Log in' })).toBeTruthy()
 })
 
+test('only "Create an account" warns not to reuse a password, in normal text', () => {
+  const warning = "This is a demo. Don't use a password you use anywhere else."
+  render(<App />)
+  expect(loginBox().queryByText(warning)).toBeNull()
+
+  switchToSignUp()
+
+  const shown = loginBox().getByText(warning)
+  expect(shown.className).toBe('login-warning')
+  expect(shown.className).not.toContain('error')
+})
+
 test('creating an account checks the backend\'s rules first, and sends nothing if one fails', () => {
   render(<App />)
   switchToSignUp()

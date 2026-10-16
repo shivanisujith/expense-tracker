@@ -7,6 +7,9 @@
 2. From before accounts ("before_login"): categories have no owner. They
    are kept, unclaimed, until the first account signs up. See
    specs/backend-spec.md, "Upgrading to accounts".
+3. The online PostgreSQL database from before accounts gets the same
+   upgrade, in place. See specs/backend-spec.md, "Upgrading the online
+   database to accounts".
 """
 
 import filecmp
@@ -188,3 +191,37 @@ def _add_accounts(conn: sqlite3.Connection, users_and_sessions_tables: str, new_
             f"Row counts changed while adding accounts: categories, expenses, limits "
             f"{counts_before} -> {counts_after}"
         )
+
+
+# PostgreSQL can change a table in place, inside a transaction: the old
+# categories gain an empty user_id (unclaimed) and an icon chosen by id,
+# and names become unique per account instead of across the whole table.
+POSTGRES_ADD_ACCOUNTS = f"""
+ALTER TABLE categories ADD COLUMN user_id BIGINT REFERENCES users (id);
+ALTER TABLE categories ADD COLUMN icon TEXT NOT NULL DEFAULT '{DEFAULT_ICON}';
+UPDATE categories SET icon = CASE id {_ICON_BY_ID} ELSE '{DEFAULT_ICON}' END;
+DROP INDEX categories_name_ignoring_capitals;
+CREATE UNIQUE INDEX categories_name_ignoring_capitals ON categories (user_id, lower(name));
+"""
+
+
+def upgrade_postgres_to_accounts(conn, users_and_sessions_tables: str) -> None:
+    """Must run inside conn.transaction(), so any failure undoes all of it.
+    There is no file to back up: the Neon backup is made by hand first."""
+    # Another server starting at the same moment waits here, then finds
+    # the users table and leaves the database alone.
+    conn.execute("LOCK TABLE categories, expenses, category_limits IN ACCESS EXCLUSIVE MODE")
+    if conn.execute("SELECT to_regclass('public.users') IS NOT NULL").fetchone()[0]:
+        return
+
+    tables = ("categories", "expenses", "category_limits")
+    counts_before = [_count(conn, table) for table in tables]
+    conn.execute(users_and_sessions_tables)
+    conn.execute(POSTGRES_ADD_ACCOUNTS)
+    counts_after = [_count(conn, table) for table in tables]
+    if counts_after != counts_before:
+        raise MigrationError(
+            f"Row counts changed while adding accounts: categories, expenses, limits "
+            f"{counts_before} -> {counts_after}"
+        )
+    logger.warning("Upgraded the online database to support accounts")

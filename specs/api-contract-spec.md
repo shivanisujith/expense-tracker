@@ -28,8 +28,8 @@ in `specs/backend-spec.md`. How the frontend uses them is in
 - **On the laptop:** `http://localhost:8000/api`
 - **Online:** `https://<render-name>.onrender.com/api` (the exact address
   is given by Render when the backend is created).
-- **Login experiment (laptop only):** `http://localhost:8001/api`, so it
-  never mixes with a normal server on port 8000. It is never online.
+- **Login version on the laptop:** `http://localhost:8001/api`, so it
+  never mixes with a normal server on port 8000.
 
 Everything in this contract is the same at every address.
 
@@ -38,13 +38,13 @@ Browsers only let a page read the backend's answers if the backend allows
 that page's address. The backend allows:
 - On the laptop: `http://localhost:5173`.
 - Online: `https://shivanisujith.github.io` (the GitHub Pages site).
-- Login experiment: `http://localhost:5174`.
+- Login version on the laptop: `http://localhost:5174`.
 
 This comes from the `ALLOWED_ORIGINS` setting (see
 `specs/backend-spec.md`). Requests from other pages are not refused by the
 backend, but the browser hides the answers from them. This is not a
-security protection by itself; in the login experiment, the session token
-is what protects each account's data.
+security protection by itself; the session token is what protects each
+account's data.
 
 ## Logging in (sessions)
 - Sign up (endpoint 12) and log in (endpoint 13) answer with a `token`.

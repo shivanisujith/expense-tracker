@@ -29,13 +29,13 @@ limits.
   cannot refuse invalid entries (such as a negative amount) or warn when a
   category goes over its limit, and this course is about building and
   testing a real web application.
-- Would revisit if: the app needs logins or more than a course demo's
-  traffic, in which case we would move to paid plans that don't sleep and
-  that keep backups.
-- **Login experiment (branch `experiment/login`):** accounts are a local
-  learning experiment. This version runs on the laptop only, with its own
-  database file (`backend/expenses-login.db`), and is never deployed,
-  merged, or pushed. The online app above stays as it is, without login.
+- Would revisit if: the app needs real personal data or more than a
+  course demo's traffic, in which case we would move to paid plans that
+  don't sleep and that keep backups. Login here is a demo and stays on the
+  free plans.
+- **Accounts (login):** part of the online app, on the same GitHub Pages,
+  Render, and Neon setup. On the laptop the login version uses its own
+  database file (`backend/expenses-login.db`).
   - Passwords are hashed with `argon2-cffi` (the Argon2id method, the
     current recommended way to store passwords). The typed password is
     never stored.
@@ -191,8 +191,9 @@ limits.
     message, and nothing is saved. Exactly Rs 10,00,00,000.00 is
     accepted.
     -- decided by: automated test.
-22. The public site works end to end (the expense, limit, category, and
-    month features, and the "Can't reach the server" message), its data
+22. The public site works end to end (sign up, log in, log out, the
+    expense, limit, category, and month features, and the "Can't reach the
+    server" message), its data
     survives a backend restart and redeploy, and it is deployed only when
     every backend and frontend test has passed.
     -- decided by: CI run (GitHub Actions), plus a manual browser check on
@@ -202,7 +203,7 @@ limits.
     calculated by the backend, and leaves out any part that doesn't apply.
     -- decided by: automated test, plus a manual browser check.
 
-Criteria 24 to 33 cover the login experiment. With login, criteria 1 to
+Criteria 24 to 34 cover login. With login, criteria 1 to
 23 are read as "for the logged-in user, using only their own data".
 
 24. A user can sign up with a valid username and password. The account is
@@ -244,32 +245,44 @@ Criteria 24 to 33 cover the login experiment. With login, criteria 1 to
     gives the same "not found" error as an id that doesn't exist, and
     changes nothing. An expense can only use the user's own categories.
     -- decided by: automated test.
-33. When the app starts with a database from before accounts existed, it
-    first saves a backup copy of the database file, then upgrades it so
+33. When the app starts with a SQLite database file from before accounts
+    existed, it first saves a backup copy of the database file, then
+    upgrades it so
     every existing expense, category, and limit is kept unchanged. The
     first account to sign up then owns all of it; later accounts start
     with the six starting categories and no expenses.
     -- decided by: automated test, using a database file from before
     accounts, plus a manual check on `backend/expenses-login.db`.
+34. When the online app starts with a PostgreSQL database from before
+    accounts existed, it upgrades it in one all-or-nothing step, so every
+    existing expense, category, and limit is kept unchanged and unclaimed
+    until the first sign-up, exactly as in criterion 33. If the number of
+    categories, expenses, or limits would change, nothing is changed. The
+    backend can't copy an online database, so the backup is made by hand
+    in the Neon dashboard before deploying.
+    -- decided by: automated test against a throwaway PostgreSQL, using
+    the tables from before accounts, plus a manual check on the public
+    site after deploying.
 
 ## Known Limitations
-- **No login.** The online app has no accounts or passwords. Anyone with
-  the link can see, add, change, and delete all of its data, and everyone
-  shares the same data. This is acceptable for a course demo only; real
-  personal spending should not be entered online. (The login experiment
-  is laptop-only and does not change the online app.)
-- **Login experiment, for learning only:**
+- **Accounts are a demo.** Anyone with the link can create an account.
+  Don't reuse a password used anywhere else, and don't enter real personal
+  spending online.
+- **Login, for learning only:**
   - Nothing stops someone from guessing passwords many times.
   - The login token is kept in the browser's storage, where a harmful
-    script on the page could read it. Fine for learning, not for real use.
+    script on the page could read it. That storage is shared by every page
+    under `https://shivanisujith.github.io`. Fine for learning, not for
+    real use.
   - A forgotten password can't be recovered; the account's data stays in
     the database but can't be reached from the page.
+  - The online data from before accounts goes to whoever signs up first
+    after the upgrade.
 - **The free server sleeps.** After 15 minutes with no visitors, the
   backend sleeps, and the next visit takes about a minute while it wakes
   up.
-- **Separate data.** The online app starts with an empty database (just
-  the six starting categories). Data on the laptop and data online are
-  separate, and neither is copied to the other.
+- **Separate data.** Data on the laptop and data online are separate, and
+  neither is copied to the other.
 - **No backups** are set up on the free plans.
 - **Free-plan limits:** the online database holds at most 0.5 GB.
 
@@ -287,8 +300,6 @@ Criteria 24 to 33 cover the login experiment. With login, criteria 1 to
 - Login extras: password reset or recovery, changing a username or
   password, deleting an account, "remember me", email addresses, limiting
   repeated login attempts, and sharing data between accounts.
-- Deploying the login version online, or upgrading the online PostgreSQL
-  database to it.
 - Currencies other than Indian rupees.
 - Charts and graphs. (Exception: a simple progress bar on each category card, showing how much of its limit is used, is allowed.)
 - Bank or UPI connections.
