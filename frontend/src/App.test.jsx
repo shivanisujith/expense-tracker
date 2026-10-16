@@ -73,7 +73,8 @@ afterEach(() => {
 
 const spentBox = () => within(screen.getByRole('region', { name: /^Spent/ }))
 const monthSelect = () => screen.getByRole('combobox', { name: 'Show expenses from' })
-const listedNotes = () => [...document.querySelectorAll('.expense-note')].map((note) => note.textContent)
+// Each row's main text is its note (every fake expense here has one).
+const listedNotes = () => [...document.querySelectorAll('.expense-title')].map((note) => note.textContent)
 
 async function openPage() {
   render(<App />)

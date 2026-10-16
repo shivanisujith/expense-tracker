@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import ExpenseList from './ExpenseList.jsx'
 
-afterEach(cleanup)
+// Every test runs on 16 Oct 2026 in India.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-16T06:00:00Z'))
+})
+
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 const noop = () => {}
 
@@ -26,37 +35,63 @@ function renderList(expenses, status = 'loaded', monthProps = {}) {
   )
 }
 
-function headingTexts(container) {
-  const headings = container.querySelector('.expense-headings')
-  return headings ? [...headings.children].map((child) => child.textContent) : null
+// --- Friendlier rows (specs/frontend-spec.md, "Expense list") ---
+
+function expense(changes) {
+  return { id: 1, amount_paise: 1250, category: 'Food', category_id: 1, date: '2026-10-16', note: 'Lunch', ...changes }
 }
 
-test('shows Date, Category, Note and Amount headings above the expenses', () => {
+function rows(container) {
+  return [...container.querySelectorAll('.expense-row')].map((row) => ({
+    title: row.querySelector('.expense-title').textContent,
+    meta: row.querySelector('.expense-meta').textContent,
+    amount: row.querySelector('.expense-amount').textContent,
+  }))
+}
+
+test('the note is the main text, with "Category · day" underneath', () => {
+  const { container } = renderList([expense({})])
+  expect(rows(container)).toEqual([{ title: 'Lunch', meta: 'Food · Today', amount: 'Rs 12.50' }])
+})
+
+test('with no note, the category is the main text and only the day is underneath', () => {
+  const { container } = renderList([expense({ note: '', category: 'Bills', category_id: 4, date: '2026-10-15' })])
+  expect(rows(container)).toEqual([{ title: 'Bills', meta: 'Yesterday', amount: 'Rs 12.50' }])
+})
+
+test('older days show a short date, with the year only for other years', () => {
   const { container } = renderList([
-    { id: 1, amount_paise: 1250, category: 'Food', date: '2026-10-07', note: 'Lunch' },
+    expense({ id: 3, date: '2026-10-02', note: 'Bus' }),
+    expense({ id: 2, date: '2025-12-31', note: '' }),
   ])
-
-  expect(headingTexts(container)).toEqual(['Date', 'Category', 'Note', 'Amount', ''])
-  // Headings come first, then the rows, in the same column layout.
-  const table = container.querySelector('.expense-table')
-  expect(table.firstElementChild.className).toBe('expense-headings')
-  expect(table.querySelectorAll('.expense-row')).toHaveLength(1)
+  expect(rows(container).map((row) => row.meta)).toEqual(['Food · 2 Oct', '31 Dec 2025'])
 })
 
-test('no headings when the list is empty', () => {
-  const { container } = renderList([])
-
-  expect(screen.getByText('No expenses yet. Add your first one above.')).toBeTruthy()
-  expect(headingTexts(container)).toBeNull()
+test('each row is: icon, the two lines of text, the amount, then edit and delete', () => {
+  const { container } = renderList([expense({})])
+  const parts = [...container.querySelector('.expense-row').children].map((child) => child.className)
+  expect(parts).toEqual(['category-icon', 'expense-text', 'expense-amount', 'item-buttons'])
+  expect(screen.getByRole('button', { name: 'Edit expense' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Delete expense' })).toBeTruthy()
 })
 
-test('no headings while loading or when the list fails to load', () => {
-  const loading = renderList(null, 'loading')
-  expect(headingTexts(loading.container)).toBeNull()
-  loading.unmount()
+test('screen readers read note, category and day, then amount, in that order', () => {
+  const { container } = renderList([expense({})])
+  expect(container.querySelector('.expense-row').textContent).toBe('LunchFood · TodayRs 12.50')
+})
 
-  const failed = renderList(null, 'error')
-  expect(headingTexts(failed.container)).toBeNull()
+test('there are no column headings any more', () => {
+  const { container } = renderList([expense({})])
+  expect(container.querySelector('.expense-headings')).toBeNull()
+  for (const heading of ['Date', 'Category', 'Note', 'Amount']) {
+    expect(screen.queryByText(heading, { exact: true })).toBeNull()
+  }
+})
+
+test('a long note keeps everything in the row', () => {
+  const longNote = 'Birthday dinner for the whole family at the new place near the station'
+  const { container } = renderList([expense({ note: longNote })])
+  expect(rows(container)).toEqual([{ title: longNote, meta: 'Food · Today', amount: 'Rs 12.50' }])
 })
 
 // --- Month choice (criterion 20) ---

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { deleteExpense } from '../api.js'
-import { formatDate, formatMonth } from '../dates.js'
+import { dayLabel, formatMonth, todayInIst } from '../dates.js'
 import { formatRupees } from '../money.js'
 import { ALL_MONTHS } from '../months.js'
 import CategoryIconFor from './CategoryIconFor.jsx'
@@ -120,20 +120,8 @@ function ListBody({ expenses, status, month, onRetry, renderItem }) {
     if (month !== ALL_MONTHS) return <p className="muted">{`No expenses in ${formatMonth(month)}.`}</p>
     return <p className="muted">No expenses yet. Add your first one above.</p>
   }
-  // The headings and every row share one set of columns, so they line up.
-  // Screen readers skip the headings; each row reads naturally on its own.
-  return (
-    <div className="expense-table">
-      <div className="expense-headings" aria-hidden="true">
-        <span>Date</span>
-        <span>Category</span>
-        <span>Note</span>
-        <span className="amount-heading">Amount</span>
-        <span />
-      </div>
-      <ul className="expense-list">{expenses.map(renderItem)}</ul>
-    </div>
-  )
+  // No column headings: each row explains itself.
+  return <ul className="expense-list">{expenses.map(renderItem)}</ul>
 }
 
 function ExpenseItem({
@@ -145,15 +133,20 @@ function ExpenseItem({
   onCancelDelete,
   onConfirmDelete,
 }) {
+  // The note is the main text; with no note, the category takes its place
+  // and isn't repeated underneath. Days are worked out in IST.
+  const day = dayLabel(expense.date, todayInIst())
+  const title = expense.note || expense.category
+  const meta = expense.note ? `${expense.category} · ${day}` : day
+
   return (
     <li className="expense-item">
       <div className="expense-row">
-        <span className="expense-date">{formatDate(expense.date)}</span>
-        <span className="expense-category">
-          <CategoryIconFor categoryId={expense.category_id} />
-          {expense.category}
-        </span>
-        <span className="expense-note">{expense.note}</span>
+        <CategoryIconFor categoryId={expense.category_id} />
+        <div className="expense-text">
+          <span className="expense-title">{title}</span>
+          <span className="expense-meta">{meta}</span>
+        </div>
         <span className="expense-amount">{formatRupees(expense.amount_paise)}</span>
         <div className="item-buttons">
           <IconButton label="Edit expense" onClick={onEdit} disabled={confirming}>

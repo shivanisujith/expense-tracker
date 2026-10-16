@@ -355,12 +355,7 @@ button.danger-solid:hover:not(:disabled) {
   font-weight: 600;
 }
 
-/* Expense list: one clean row per expense. The card is a "container" so
-   its rows can wrap based on the card's own width, not the screen's. */
-.expense-section {
-  container-type: inline-size;
-}
-
+/* Expense list: one clean row per expense */
 .expense-list {
   list-style: none;
   margin: 0;
@@ -376,57 +371,29 @@ button.danger-solid:hover:not(:disabled) {
   border-top: none;
 }
 
-/* One set of columns for the headings and all rows: date, category (wraps
-   past 9rem), note (takes the rest), amount, icon buttons. Each level
-   below uses "subgrid" to share those columns, so everything lines up. */
-.expense-table {
-  display: grid;
-  grid-template-columns: auto fit-content(9rem) minmax(0, 1fr) auto auto;
-  column-gap: 16px;
-}
-
-.expense-headings,
-.expense-table .expense-list,
-.expense-table .expense-item,
+/* Each row: icon, two lines of text (taking the rest of the width, long
+   notes wrap), amount, icon buttons. The same layout at every width. */
 .expense-row {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: subgrid;
-}
-
-.expense-headings {
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.amount-heading {
-  text-align: right;
-}
-
-.expense-row {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
+  column-gap: 12px;
 }
 
-.expense-category {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.expense-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.expense-title {
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
-.expense-table .confirm-delete {
-  grid-column: 1 / -1;
-}
-
-.expense-date {
+.expense-meta {
   color: var(--muted);
-}
-
-.expense-note {
-  color: var(--muted);
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
@@ -679,52 +646,6 @@ button.danger-solid:hover:not(:disabled) {
 
 .text-input[aria-invalid='true'] {
   border-color: var(--danger);
-}
-
-/* Expense rows in a narrow list card: category and amount on top,
-   date and note below, icons kept on the right. */
-@container (max-width: 420px) {
-  .expense-table,
-  .expense-table .expense-list,
-  .expense-table .expense-item {
-    display: block;
-  }
-
-  .expense-headings {
-    display: none;
-  }
-
-  .expense-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-      'category amount buttons'
-      'date date buttons'
-      'note note buttons';
-    gap: 0 12px;
-  }
-
-  .expense-category {
-    grid-area: category;
-    font-weight: 500;
-  }
-
-  .expense-date {
-    grid-area: date;
-    font-size: 0.9rem;
-  }
-
-  .expense-note {
-    grid-area: note;
-    font-size: 0.9rem;
-  }
-
-  .expense-amount {
-    grid-area: amount;
-  }
-
-  .item-buttons {
-    grid-area: buttons;
-  }
 }
 
 /* Narrower than a laptop: the two columns stack (cards, then list). */
