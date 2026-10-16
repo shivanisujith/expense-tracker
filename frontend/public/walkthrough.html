@@ -253,6 +253,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <a href="#parts">The four parts</a>
     <a href="#journey-add">Journey 1: adding an expense</a>
     <a href="#journey-down">Journey 2: server unreachable</a>
+    <a href="#journey-login">Journey 3: signing up and logging in</a>
     <a href="#built">How this was built</a>
     <a href="#limits">Known limitations</a>
     <a href="#glossary">Glossary</a>
@@ -270,7 +271,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 <section class="box" id="big-picture">
   <h2>The big picture</h2>
   <p class="lead">What the app does, in one sentence, and the four places it lives.</p>
-  <p>The app lets one person record everyday expenses by category, set a monthly limit for each category, and see whether they are staying within it <span class="src rec">goal-spec</span>. It looks like one web page, but behind it are separate pieces that run in different places on the internet.</p>
+  <p>The app lets a person record everyday expenses by category, set a monthly limit for each category, and see whether they are staying within it <span class="src rec">goal-spec</span>. Each person has their own account (a username and password), and after logging in sees and changes only their own data <span class="src rec">goal-spec</span>. It looks like one web page, but behind it are separate pieces that run in different places on the internet.</p>
   <p>The basic idea behind almost every website: the part you see is the <a class="t" data-t="frontend" href="#g-frontend">frontend</a>, and it runs inside your <a class="t" data-t="browser" href="#g-browser">browser</a>. The part that checks rules and keeps data is the <a class="t" data-t="backend" href="#g-backend">backend</a>, a program running on a <a class="t" data-t="server" href="#g-server">server</a>. The backend stores everything in a <a class="t" data-t="database" href="#g-database">database</a>. They talk by sending <a class="t" data-t="request" href="#g-request">requests</a> and <a class="t" data-t="response" href="#g-response">responses</a> over the internet.</p>
 
   <div class="diagram-scroll">
@@ -402,6 +403,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <li><strong>The "base path".</strong> GitHub Pages serves this project under <code>/expense-tracker/</code>, so the build tells Vite to put every file there. The laptop version uses <code>/</code> <span class="src rec">vite.config.js</span>.</li>
       <li><strong>A 90-second wait, and a calm "waking up" note.</strong> See Journey 2 below <span class="src rec">api-contract-spec</span>.</li>
       <li><strong>Colours with a readability rule.</strong> Pink, cream, plum and sage, where every text colour meets the <a class="t" data-t="wcag" href="#g-wcag">WCAG AA</a> contrast standard, and red is used <em>only</em> for over-limit warnings and errors, so red always means "something's wrong" <span class="src rec">frontend-spec</span>.</li>
+      <li><strong>The log in screen comes first.</strong> With no saved <a class="t" data-t="token" href="#g-token">token</a>, the page shows the log in screen instead of the dashboard. "Create an account" adds a short warning in normal text, not red, because it isn't an error: "This is a demo. Don't use a password you use anywhere else." <span class="src rec">frontend-spec</span>.</li>
       <li><strong>Popups use the browser's built-in <code>&lt;dialog&gt;</code></strong>, which handles blocking the page behind and the Escape key <span class="src rec">AddExpenseModal.jsx comment</span>. Clicking outside a popup does <em>not</em> close it, so typed details aren't lost by accident <span class="src rec">frontend-spec</span>.</li>
     </ul>
 
@@ -416,6 +418,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <ul>
       <li><span class="gotcha">The backend address is baked in when the page is built.</span> If the Render address ever changed, the page would have to be rebuilt. The deploy job stops with a clear error if <code>VITE_API_BASE</code> isn't set <span class="src rec">ci.yml</span>.</li>
       <li><span class="gotcha">Everything in the page is public.</span> Anyone can read the page's code in their browser, so it must never contain a password. The backend address is not a secret <span class="src rec">frontend-spec</span>.</li>
+      <li><span class="gotcha">The login token is kept in <a class="t" data-t="localstorage" href="#g-localstorage">localStorage</a>.</span> That way a reload stays logged in, but a harmful script on the page could read it, and that storage is shared by every page under <code>https://shivanisujith.github.io</code>. Fine for learning, not for real use <span class="src rec">goal-spec, Known Limitations</span>.</li>
       <li><span class="gotcha">Wrong base path = blank page.</span> If the base path were wrong, the browser would look for the files in the wrong folder and the page would load blank <span class="src inf">My inference</span>.</li>
       <li><span class="gotcha">Two clocks.</span> The date under the title and the "current month" come from <em>your computer's</em> clock (in <a class="t" data-t="ist" href="#g-ist">IST</a>), while the category cards' month comes from the backend. If your computer's clock is wrong they could disagree. The spec accepts this; the backend still refuses future months <span class="src rec">frontend-spec</span>.</li>
       <li><span class="gotcha">Files in <code>frontend/public/</code> are copied as they are.</span> That's how this walkthrough page gets published too: Vite copies it into the build without changing it <span class="src inf">My inference, from how Vite treats that folder</span>.</li>
@@ -425,7 +428,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <details class="qa"><summary>Why does the page turn "12.50" into 1250 by handling text, instead of just multiplying by 100?<span class="reveal">Show answer</span></summary>
       <div class="answer">Computers store most decimal numbers approximately (floating point). For example, in JavaScript <code>0.1 + 0.2</code> gives <code>0.30000000000000004</code>. Multiplying a decimal rupee amount by 100 can leave tiny errors like that, and money totals would then drift. So the page reads the rupees and the paise as two whole numbers and combines them, and everything after that is whole paise. The backend also stores whole paise, so totals are always exact (goal-spec, Constraints).</div></details>
     <details class="qa"><summary>The page already refuses an amount of 0. Why does the backend check it again?<span class="reveal">Show answer</span></summary>
-      <div class="answer">Because the page isn't the only way in. Anyone can send requests straight to the backend (with a tool like <code>curl</code>, or from the browser's developer tools), skipping the page completely, and there is no login. So the rule is enforced where the data is saved. The page's check only exists to give a quick, friendly message. Acceptance criterion 4 even tests that the backend refuses a bad category "even if the frontend sends it".</div></details>
+      <div class="answer">Because the page isn't the only way in. Anyone can send requests straight to the backend (with a tool like <code>curl</code>, or from the browser's developer tools), skipping the page completely. Logging in doesn't change this: a logged-in person can send any values they like with their own token. So the rule is enforced where the data is saved. The page's check only exists to give a quick, friendly message. Acceptance criterion 4 even tests that the backend refuses a bad category "even if the frontend sends it".</div></details>
     <details class="qa"><summary>Why is the build's base path <code>/expense-tracker/</code>, but <code>/</code> when running on the laptop?<span class="reveal">Show answer</span></summary>
       <div class="answer">GitHub Pages serves a project's site in a folder named after the repository: <code>shivanisujith.github.io/<strong>expense-tracker</strong>/</code>. The page's files must say they live there, or the browser will look for them at the top of the site and find nothing. On the laptop, <code>npm run dev</code> serves the page at the top level (<code>localhost:5173/</code>), so it uses <code>/</code>. <code>vite.config.js</code> picks the right one depending on whether it is building or running the dev server.</div></details>
   </div>
@@ -438,12 +441,13 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <p>Render is a hosting company that runs programs on its servers. Here it runs the backend: a <a class="t" data-t="python" href="#g-python">Python</a> program built with <a class="t" data-t="fastapi" href="#g-fastapi">FastAPI</a> (the code is in <code>backend/app/</code>). For every request it:</p>
     <ol>
       <li>checks that the page asking is allowed (<a class="t" data-t="cors" href="#g-cors">CORS</a>),</li>
+      <li>checks who is logged in, from the <a class="t" data-t="token" href="#g-token">token</a> sent with the request (Journey 3), and refuses with 401 if nobody is,</li>
       <li>checks the input against the rules (<a class="t" data-t="validation" href="#g-validation">validation</a>, in <code>validation.py</code>),</li>
       <li>reads or writes the database,</li>
       <li>adds up totals, works out who is over their limit and builds the "insight" line,</li>
-      <li>answers in JSON with a <a class="t" data-t="status" href="#g-status">status code</a>: 200/201 if it worked, 422 if the input broke a rule, 404 if the thing doesn't exist, 500 if something broke.</li>
+      <li>answers in JSON with a <a class="t" data-t="status" href="#g-status">status code</a>: 200/201 if it worked, 401 if you're not logged in, 422 if the input broke a rule, 404 if the thing doesn't exist (or belongs to another account), 500 if something broke.</li>
     </ol>
-    <p>There are 11 endpoints, all listed in <code>specs/api-contract-spec.md</code>, for example <code>POST /api/expenses</code> (add), <code>GET /api/summary</code> (this month's cards) and <code>GET /api/months/2026-09/total</code>.</p>
+    <p>There are 15 endpoints, all listed in <code>specs/api-contract-spec.md</code>, for example <code>POST /api/expenses</code> (add), <code>GET /api/summary</code> (this month's cards), <code>GET /api/months/2026-09/total</code> and <code>POST /api/auth/signup</code> (create an account).</p>
 
     <h4>Why it's needed</h4>
     <ul>
@@ -461,13 +465,15 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <li><strong>Crashes still carry CORS headers.</strong> The part that turns unexpected crashes into a 500 answer is placed <em>inside</em> the CORS part, "so the browser can tell 'server error' from 'can't reach server'" <span class="src rec">code comment in main.py</span>.</li>
       <li><strong>Same code for two databases.</strong> A small wrapper in <code>db.py</code> lets the rest of the backend talk to SQLite (laptop) or PostgreSQL (online) the same way. The <code>DATABASE_URL</code> <a class="t" data-t="envvar" href="#g-envvar">environment variable</a> decides which <span class="src rec">backend-spec, db.py</span>.</li>
       <li><strong>An upper limit of Rs 10,00,00,000.00</strong> on any amount or limit, added after huge numbers were found to break the totals <span class="src rec">commit 2d71ab5</span>.</li>
+      <li><strong>Passwords are never stored.</strong> Only an Argon2 <a class="t" data-t="hash" href="#g-hash">password hash</a> is saved, made by the <code>argon2-cffi</code> library, "the current recommended way to store passwords" <span class="src rec">goal-spec</span>. Tokens aren't stored either, only their SHA-256 fingerprint, "so someone who copies the database file can't use it to log in" <span class="src rec">backend-spec</span>.</li>
+      <li><strong>Someone else's id looks exactly like a missing one.</strong> Editing another account's expense gives the same 404 as an id that doesn't exist, "so guessing ids reveals nothing" <span class="src rec">backend-spec, rule O2</span>.</li>
       <li><strong>Requests must say they are JSON</strong> (the <code>Content-Type: application/json</code> label), otherwise they are refused <span class="src rec">api-contract-spec</span>.</li>
     </ul>
 
     <h4>What else could have been used</h4>
     <ul>
       <li>Other Python frameworks (Flask, Django) or a JavaScript backend (Node with Express) would all work. FastAPI gives automatic request reading and a built-in documentation page at <code>/docs</code> <span class="src inf">My inference</span>.</li>
-      <li>Other hosts (Fly.io, Railway, a rented server), or a paid Render plan that doesn't sleep. The goal spec says it would move to paid plans "if the app needs logins or more than a course demo's traffic" <span class="src rec">goal-spec</span>.</li>
+      <li>Other hosts (Fly.io, Railway, a rented server), or a paid Render plan that doesn't sleep. The goal spec says it would move to paid plans "if the app needs real personal data or more than a course demo's traffic", and that "login here is a demo and stays on the free plans" <span class="src rec">goal-spec</span>.</li>
     </ul>
 
     <h4>Gotchas</h4>
@@ -475,8 +481,9 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <li><span class="gotcha">The free server sleeps.</span> After 15 minutes with no visitors it sleeps, and the next visit waits about a minute while it wakes <span class="src rec">goal-spec</span>.</li>
       <li><span class="gotcha">Its disk is wiped on every restart and redeploy</span>, which is why the data can't live in a SQLite file on Render <span class="src rec">goal-spec</span>.</li>
       <li><span class="gotcha">CORS is not security.</span> It only stops <em>other web pages</em> from reading the answers in a browser. Anyone can still call the API directly <span class="src rec">api-contract-spec</span>.</li>
-      <li><span class="gotcha">Automatic deploys didn't happen.</span> A comment in <code>ci.yml</code> says "Render deploys the backend only after these checks pass", but in practice Render's auto-deploy never triggered: the backend only updated after a <strong>manual deploy</strong> from Render's dashboard <span class="src rec">Recorded: build sessions</span>. So after pushing backend changes, someone has to remember to deploy them, and the live page and the live backend can briefly be out of step.</li>
+      <li><span class="gotcha">Automatic deploys didn't happen.</span> A comment in <code>ci.yml</code> says "Render deploys the backend only after these checks pass", but in practice Render's auto-deploy never triggered: the backend only updated after a <strong>manual deploy</strong> from Render's dashboard <span class="src rec">Recorded: build sessions</span>. So after pushing backend changes, someone has to remember to deploy them, and the live page and the live backend can briefly be out of step. Before the login deploy, auto-deploy was switched <strong>off</strong> on purpose, so the backend only updates when deployed by hand once CI is green <span class="src rec">Recorded: build sessions</span>.</li>
       <li><span class="gotcha">Render's own settings aren't in the repo.</span> The start command, the secret <code>DATABASE_URL</code> and <code>ALLOWED_ORIGINS</code> live in Render's dashboard, so they can't be reviewed from the code <span class="src inf">My inference</span>.</li>
+      <li><span class="gotcha">Hashing passwords is slow on purpose.</span> Argon2 is designed to take real time and memory, so guessing passwords is expensive. On the free server's small CPU, signing up or logging in can take a second or two longer than other requests <span class="src inf">My inference</span>.</li>
       <li><span class="gotcha">Check, then act.</span> Some rules are checked and then acted on as two separate steps (for example "fewer than 20 categories?" then "add one"). If two people did this at the exact same moment, both could pass the check. Not tested, and unlikely for a demo <span class="src inf">My inference, from reading main.py</span>.</li>
     </ul>
 
@@ -494,16 +501,18 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <h3>Neon: the database</h3>
 
     <h4>What it does</h4>
-    <p>Neon hosts a <a class="t" data-t="postgresql" href="#g-postgresql">PostgreSQL</a> database that holds all the online data in three <a class="t" data-t="table" href="#g-table">tables</a>:</p>
+    <p>Neon hosts a <a class="t" data-t="postgresql" href="#g-postgresql">PostgreSQL</a> database that holds all the online data in five <a class="t" data-t="table" href="#g-table">tables</a>:</p>
     <div class="table-scroll"><table>
       <thead><tr><th>Table</th><th>One row per…</th><th>Columns</th></tr></thead>
       <tbody>
-        <tr><td><code>categories</code></td><td>category</td><td><code>id</code>, <code>name</code></td></tr>
+        <tr><td><code>users</code></td><td>account</td><td><code>id</code>, <code>username</code>, <code>password_hash</code>, <code>created_at</code></td></tr>
+        <tr><td><code>sessions</code></td><td>logged-in session</td><td><code>id</code>, <code>user_id</code>, <code>token_hash</code>, <code>created_at</code>, <code>expires_at</code></td></tr>
+        <tr><td><code>categories</code></td><td>category</td><td><code>id</code>, <code>user_id</code>, <code>name</code>, <code>icon</code></td></tr>
         <tr><td><code>expenses</code></td><td>expense</td><td><code>id</code>, <code>amount_paise</code>, <code>category_id</code>, <code>date</code>, <code>note</code>, <code>created_at</code></td></tr>
         <tr><td><code>category_limits</code></td><td>category with a limit</td><td><code>category_id</code>, <code>limit_paise</code></td></tr>
       </tbody>
     </table></div>
-    <p>On the laptop the same tables live in a <a class="t" data-t="sqlite" href="#g-sqlite">SQLite</a> file instead, <code>backend/expenses.db</code>, with the same rules <span class="src rec">backend-spec</span>.</p>
+    <p>Expenses and limits have no <code>user_id</code> of their own: they belong to whoever owns their category, "so ownership is written down in only one place and can't disagree" <span class="src rec">backend-spec</span>. On the laptop the same tables live in a <a class="t" data-t="sqlite" href="#g-sqlite">SQLite</a> file instead, <code>backend/expenses-login.db</code> for the login version, with the same rules <span class="src rec">backend-spec</span>.</p>
 
     <h4>Why it's needed</h4>
     <p>The data must survive restarts and redeploys. Render's free disk is wiped every time, so a SQLite file there would lose everything. Render's own free PostgreSQL was rejected because it is deleted 30 days after it's created <span class="src rec">goal-spec</span>.</p>
@@ -512,8 +521,9 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <ul>
       <li><strong>Money as whole paise</strong> in big whole-number columns (<code>BIGINT</code>), never decimals <span class="src rec">goal-spec, backend-spec</span>.</li>
       <li><strong>Expenses point to their category by id, not by name.</strong> Renaming "Food" to "Groceries" changes one row in <code>categories</code>, and every expense follows automatically <span class="src rec">backend-spec</span>. Ids are never reused, even after deletion <span class="src rec">backend-spec</span>.</li>
-      <li><strong>The database has its own safety net.</strong> <a class="t" data-t="checkc" href="#g-checkc">CHECK rules</a> (amount &gt; 0, name 1–30 characters), <a class="t" data-t="fk" href="#g-fk">references</a> (an expense must point at a real category), and a <a class="t" data-t="index" href="#g-index">unique index</a> on the lower-case name. The code comment says these are "a last safety net; validation.py gives the real errors" <span class="src rec">db.py</span>.</li>
-      <li><strong>Set up once, then left alone.</strong> When the backend starts and the database is empty, it creates the tables and the six starting categories in one all-or-nothing <a class="t" data-t="transaction" href="#g-transaction">transaction</a>. If the tables exist, it changes nothing, so restarts keep the data <span class="src rec">backend-spec</span>.</li>
+      <li><strong>The database has its own safety net.</strong> <a class="t" data-t="checkc" href="#g-checkc">CHECK rules</a> (amount &gt; 0, name 1–30 characters), <a class="t" data-t="fk" href="#g-fk">references</a> (an expense must point at a real category), and a <a class="t" data-t="index" href="#g-index">unique index</a> on the lower-case name within each account. The code comment says these are "a last safety net; validation.py gives the real errors" <span class="src rec">db.py</span>.</li>
+      <li><strong>Set up once, then left alone.</strong> When the backend starts and the database is empty, it creates the tables in one all-or-nothing <a class="t" data-t="transaction" href="#g-transaction">transaction</a>; each new account gets its six starting categories when it signs up. If the tables are current, it changes nothing, so restarts keep the data <span class="src rec">backend-spec</span>.</li>
+      <li><strong>Upgraded in place for accounts.</strong> The online database already had expenses before login existed. When the login backend first starts, it adds the <code>users</code> and <code>sessions</code> tables and the new category columns in one transaction, counts the categories, expenses and limits before and after, and undoes everything if they differ. The old data is kept "unclaimed" until the first sign-up, which takes all of it <span class="src rec">backend-spec, "Upgrading the online database to accounts"</span>. The backend can't copy an online database, so the <a class="t" data-t="backup" href="#g-backup">backup</a> is made by hand in the Neon dashboard before deploying <span class="src rec">goal-spec, criterion 34</span>.</li>
       <li><strong>Sums are forced to whole numbers.</strong> Every <code>SUM</code> is wrapped in <code>CAST(… AS BIGINT)</code> and there's a test called "sums are whole numbers, not decimals" <span class="src rec">commit c8003b1, test_database.py</span>. Why: PostgreSQL returns the sum of big whole numbers as a decimal type, which would reach the page as <code>1250.0</code>-style values <span class="src inf">My inference, from how PostgreSQL works</span>.</li>
       <li><strong>Safe upgrade for old laptop databases.</strong> When categories became editable, old SQLite files (which stored category names) are converted to the new id format, after first copying the file as a <a class="t" data-t="backup" href="#g-backup">backup</a>, and the row counts are compared before and after <span class="src rec">backend-spec, commit 46d91f2</span>. That process is called a <a class="t" data-t="migration" href="#g-migration">migration</a>.</li>
     </ul>
@@ -532,6 +542,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <li><span class="gotcha">Laptop and online data are separate.</span> Neither is copied to the other <span class="src rec">goal-spec</span>.</li>
       <li><span class="gotcha">Dates are stored as text</span> (<code>"2026-10-07"</code>), and "which month" is found by taking the first 7 characters. It works because this format sorts correctly as text, but the database can't do real date arithmetic on it <span class="src inf">My inference</span>.</li>
       <li><span class="gotcha">Free plan: 0.5 GB and no backups</span> <span class="src rec">goal-spec</span>.</li>
+      <li><span class="gotcha">The upgrade to accounts only goes one way.</span> Putting the old backend back would not be enough: it doesn't know about accounts, so it would show every account's categories mixed together. Undoing the deploy means restoring the Neon backup as well as the old code <span class="src inf">My inference, from reading the old db.py</span>.</li>
     </ul>
 
     <h4>Interview questions</h4>
@@ -596,7 +607,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 <!-- ============================================================ -->
 <section class="box" id="journey-add">
   <h2>Journey 1: adding an expense</h2>
-  <p class="lead">You add "Lunch, Rs 12.50, Food, today" on the live site. Here is everything that happens, in order. Open "Under the hood" for the file and function involved.</p>
+  <p class="lead">You're logged in, and you add "Lunch, Rs 12.50, Food, today" on the live site. Here is everything that happens, in order. Open "Under the hood" for the file and function involved.</p>
   <p><span class="where w-browser">Browser</span><span class="where w-render">Render</span><span class="where w-neon">Neon</span>: these labels show where each step happens.</p>
 
   <ol class="journey">
@@ -608,15 +619,15 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 
     <li><span class="where w-browser">Browser</span><strong>The page sends a request.</strong> It's a <code>POST</code> to <code>https://…onrender.com/api/expenses</code> with this JSON body:
       <br><code>{"amount_paise": 1250, "category": "Food", "date": "2026-10-16", "note": "Lunch"}</code>
-      <details><summary>Under the hood</summary><div><code>request()</code> in <code>api.js</code> uses the browser's <a class="t" data-t="fetch" href="#g-fetch">fetch</a>, adds the <code>Content-Type: application/json</code> label, and sets a 90-second <a class="t" data-t="timeout" href="#g-timeout">timeout</a>. The address came from <code>VITE_API_BASE</code> when the page was built.</div></details></li>
+      <details><summary>Under the hood</summary><div><code>request()</code> in <code>api.js</code> uses the browser's <a class="t" data-t="fetch" href="#g-fetch">fetch</a>, adds the <code>Content-Type: application/json</code> label and your token in the <code>Authorization</code> header, and sets a 90-second <a class="t" data-t="timeout" href="#g-timeout">timeout</a>. The address came from <code>VITE_API_BASE</code> when the page was built.</div></details></li>
 
     <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>The browser asks permission first (CORS).</strong> The page (from <code>github.io</code>) is talking to a different <a class="t" data-t="origin" href="#g-origin">origin</a> (<code>onrender.com</code>), and it is sending JSON, so the browser first sends a small <a class="t" data-t="preflight" href="#g-preflight">preflight</a> request asking "may this page send this?". The backend says yes because <code>https://shivanisujith.github.io</code> is in <code>ALLOWED_ORIGINS</code>.
-      <details><summary>Under the hood</summary><div><code>CORSMiddleware</code> in <code>main.py</code> allows the methods GET, POST, PUT, DELETE and the <code>Content-Type</code> header. The browser does the preflight on its own; the app's code never sees it.</div></details></li>
+      <details><summary>Under the hood</summary><div><code>CORSMiddleware</code> in <code>main.py</code> allows the methods GET, POST, PUT, DELETE and the <code>Content-Type</code> and <code>Authorization</code> headers. The browser does the preflight on its own; the app's code never sees it.</div></details></li>
 
     <li><span class="where w-render">Render</span><strong>If the server was asleep, it wakes up first</strong> (about a minute). When it starts it runs <code>init_db()</code>, which sees the tables already exist and changes nothing.
       <details><summary>Under the hood</summary><div><code>lifespan()</code> in <code>main.py</code> runs at start-up and calls <code>db.init_db()</code> → <code>_init_postgres()</code>. If the wait goes past 5 seconds, the page shows "Waking up the server…" (Journey 2).</div></details></li>
 
-    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks every rule again.</strong> It loads the current category names from the database, then checks in a fixed order: amount (a whole number, more than 0, at most Rs 10 crore), category (exactly a current name), date (a real date, not after today in IST), note (100 characters at most, after trimming spaces).
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks every rule again.</strong> First it checks your token: no valid session means a 401 and nothing else happens (Journey 3). Then it loads <em>your</em> current category names from the database, then checks in a fixed order: amount (a whole number, more than 0, at most Rs 10 crore), category (exactly a current name), date (a real date, not after today in IST), note (100 characters at most, after trimming spaces).
       <details><summary>Under the hood</summary><div><code>add_expense()</code> in <code>main.py</code> calls <code>validate_expense()</code> in <code>validation.py</code>. The first failure raises an <code>ApiError</code>, sent back as a 422 with the error object, and nothing is saved.</div></details></li>
 
     <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The expense is saved.</strong> One SQL <code>INSERT</code> inside a transaction; the database gives the new row an id and checks its own safety rules too.
@@ -671,26 +682,59 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 </section>
 
 <!-- ============================================================ -->
+<section class="box" id="journey-login">
+  <h2>Journey 3: signing up and logging in</h2>
+  <p class="lead">You open the live site for the first time and create an account. Here is what happens, and how the backend knows it's you on every request after that.</p>
+
+  <ol class="journey">
+    <li><span class="where w-browser">Browser</span><strong>The log in screen shows.</strong> There's no saved token, so the page shows a cream box with Username and Password instead of the dashboard <span class="src rec">frontend-spec</span>.</li>
+    <li><span class="where w-browser">Browser</span><strong>You click "New here? Create an account".</strong> The heading changes, and a warning appears: "This is a demo. Don't use a password you use anywhere else." The page checks the rules first (username 3 to 20 letters, numbers or underscores; password 8 to 64 characters, not the same as the username) and sends nothing if one fails <span class="src rec">frontend-spec</span>.
+      <details><summary>Under the hood</summary><div><code>LoginScreen.jsx</code> switches <code>mode</code> to <code>'signup'</code>; <code>checkLoginForm()</code> in <code>loginForm.js</code> runs the checks.</div></details></li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>The page sends <code>POST /api/auth/signup</code></strong> with your username and password, over HTTPS so nobody in between can read it. This is one of only two requests that need no token.</li>
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks the rules again,</strong> lowercases the username (so "Shivani" and "shivani" are the same account), and refuses a taken one with "That username is already taken." <span class="src rec">backend-spec, rules A1 to A6</span>.</li>
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The account is created, in one all-or-nothing step</strong> <span class="src rec">backend-spec, rule A7</span>:
+      <ul>
+        <li>the password is turned into an Argon2 <a class="t" data-t="hash" href="#g-hash">hash</a>, and only the hash is saved;</li>
+        <li>the account gets its categories: the old unclaimed data if there is any (only the very first account after the upgrade), otherwise the six starting ones;</li>
+        <li>a <a class="t" data-t="session" href="#g-session">session</a> starts: a random <a class="t" data-t="token" href="#g-token">token</a> (32 random bytes) is made, and only its SHA-256 fingerprint is saved, with an end time exactly 7 days later.</li>
+      </ul>
+      <details><summary>Under the hood</summary><div><code>sign_up()</code> in <code>main.py</code>; <code>hash_password()</code> and <code>start_session()</code> in <code>accounts.py</code>. The claim is <code>UPDATE categories SET user_id = ? WHERE user_id IS NULL</code>.</div></details></li>
+    <li><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>The backend answers "201 Created"</strong> with the token. The page saves it in <a class="t" data-t="localstorage" href="#g-localstorage">localStorage</a> and opens the dashboard: "Hi shivani, here's your spending" <span class="src rec">frontend-spec</span>.</li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Every request after that carries the token</strong> in a header: <code>Authorization: Bearer &lt;token&gt;</code>. The backend fingerprints it, finds the session, and so knows whose data to use <span class="src rec">api-contract-spec</span>.
+      <details><summary>Under the hood</summary><div><code>logged_in_user()</code> in <code>accounts.py</code> runs before any other check (rule S5), so a request without a valid session never learns or changes anything.</div></details></li>
+    <li class="bad"><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>When the session ends, you're sent back to the log in screen.</strong> No token or an unknown one gives a <a class="t" data-t="status" href="#g-status">401</a> with "Please log in to continue."; after 7 days it's "Your session has expired. Please log in again." Using the app doesn't extend the 7 days <span class="src rec">goal-spec, criteria 30 and 31</span>.</li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Logging out</strong> asks the backend to delete the session, then removes the token and clears the dashboard, even if the server can't be reached. The old token can't be used again <span class="src rec">frontend-spec, goal-spec criterion 29</span>.</li>
+  </ol>
+
+  <h3>Why it's built this way</h3>
+  <ul>
+    <li><strong>One message for a wrong username and a wrong password:</strong> "Username or password is incorrect.", "so it doesn't reveal which usernames exist" <span class="src rec">goal-spec, criterion 28</span>.</li>
+    <li><strong>Hashes, not passwords; fingerprints, not tokens.</strong> Someone who got a copy of the database still couldn't read a password or log in as anyone <span class="src rec">backend-spec</span>.</li>
+    <li><strong>The old data goes to the first sign-up.</strong> The online app had data before accounts existed, and it had to belong to someone. The first account to sign up after the upgrade takes all of it; everyone after that starts with six empty categories <span class="src rec">goal-spec</span>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
 <section class="box" id="built">
   <h2>How this was built</h2>
-  <p class="lead">From the four spec files and the 44 commits between 7 and 16 October 2026.</p>
+  <p class="lead">From the four spec files and the git history between 7 and 16 October 2026.</p>
 
   <div class="grid2">
     <div class="card">
       <h4>Spec-driven development</h4>
-      <p>Before any code, the goal was written down as a <a class="t" data-t="spec" href="#g-spec">spec</a> (<code>goal-spec.md</code>, the first commit), then three more detailed specs for the frontend, the backend and the API contract. The goal spec wins any disagreement. It lists 23 <a class="t" data-t="criterion" href="#g-criterion">acceptance criteria</a>, each saying how it is decided: "automated test", "manual browser check", or "CI run" <span class="src rec">goal-spec</span>.</p>
+      <p>Before any code, the goal was written down as a <a class="t" data-t="spec" href="#g-spec">spec</a> (<code>goal-spec.md</code>, the first commit), then three more detailed specs for the frontend, the backend and the API contract. The goal spec wins any disagreement. It lists 34 <a class="t" data-t="criterion" href="#g-criterion">acceptance criteria</a> (24 to 34 were added for login), each saying how it is decided: "automated test", "manual browser check", or "CI run" <span class="src rec">goal-spec</span>.</p>
       <p><code>CLAUDE.md</code>, the instructions for the coding agent, says: read every spec before changing code, <strong>stop and report any conflict instead of guessing</strong>, never edit specs unless asked, and treat the "Out of Scope" list as binding <span class="src rec">CLAUDE.md</span>.</p>
-      <p>The history shows the habit: <strong>17 of the 44 commits change a spec</strong>, and new features usually start with a spec-only commit followed by the code. For example, <em>"Add month arrows and month filter to specs"</em> (2393e15) then <em>"Add month arrows to the Spent box…"</em> (934f5be).</p>
+      <p>The history shows the habit: <strong>19 of the first 51 commits change a spec</strong>, and new features usually start with a spec-only commit followed by the code. For example, <em>"Add month arrows and month filter to specs"</em> (2393e15) then <em>"Add month arrows to the Spent box…"</em> (934f5be).</p>
     </div>
     <div class="card">
       <h4>Tests written first</h4>
       <p>In almost every phase, the new tests were written first and run against the <em>old</em> code, where they <strong>failed</strong>, as they should, because the feature didn't exist yet. Then the change was made, and they <strong>passed</strong> <span class="src rec">Recorded: build sessions</span>. A test that has been seen failing proves it can actually catch the problem.</p>
       <p>Git can't show this order, because each test and the code it tests were committed together once the phase was approved. The order is known from the build sessions, not from the history.</p>
-      <p><strong>Test counts from the last run</strong> <span class="src rec">Recorded: build sessions</span>:</p>
+      <p><strong>Test counts from the last local run, before the login deploy</strong> <span class="src rec">Recorded: build sessions</span>:</p>
       <ul>
-        <li><strong>285</strong> backend tests on SQLite</li>
-        <li><strong>277</strong> backend tests on PostgreSQL, plus <strong>8 skipped</strong>: the migration tests, which only apply to the laptop's SQLite file (<code>test_migration.py</code>)</li>
-        <li><strong>234</strong> frontend tests</li>
+        <li><strong>449</strong> backend tests on SQLite, plus <strong>8 skipped</strong>: the online-database upgrade tests, which only apply to PostgreSQL (<code>test_postgres_login_upgrade.py</code>)</li>
+        <li><strong>438</strong> backend tests on PostgreSQL (a throwaway one in Docker), plus <strong>19 skipped</strong>: the laptop file upgrade tests, which only apply to SQLite (<code>test_migration.py</code>, <code>test_login_migration.py</code>)</li>
+        <li><strong>290</strong> frontend tests</li>
       </ul>
       <p>Test names read like spec sentences, for example <code>test_a_limit_above_the_maximum_is_refused_and_the_old_limit_kept</code>.</p>
     </div>
@@ -710,7 +754,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
   <ul>
     <li><strong>"No charts", except a progress bar</strong> on each category card <span class="src rec">goal-spec, Out of Scope</span>.</li>
     <li><strong>"Sage is the only accent colour", except the icon circles</strong>, which use three soft tints taken from the existing palette. Icons are never red, so red always means "over limit" or "error" <span class="src rec">frontend-spec</span>.</li>
-    <li><strong>A public app with no login,</strong> accepted "for a course demo only; real personal spending should not be entered online" <span class="src rec">goal-spec, Known Limitations</span>.</li>
+    <li><strong>Accounts on free plans:</strong> "Login here is a demo and stays on the free plans"; the app would move to paid plans only for real personal data or more traffic <span class="src rec">goal-spec, Technology</span>.</li>
     <li><strong>The over-limit card's light red is "deliberately stronger than a pale pink"</strong> so it stands out from the creams, not only through its border <span class="src rec">frontend-spec</span>.</li>
     <li><strong>Python's usual type check is avoided on purpose:</strong> <code>type(value) is not int</code> instead of <code>isinstance</code>, because in Python <code>True</code> and <code>False</code> count as numbers, so <code>{"amount_paise": true}</code> would otherwise sneak through as 1 paisa <span class="src rec">validation.py comment</span>.</li>
     <li><strong>Tests sometimes bypass the API on purpose:</strong> <code>insert_expense_row()</code> writes straight into the database "skipping the API's checks", for example to store a future date that the API would refuse <span class="src rec">conftest.py</span>.</li>
@@ -731,6 +775,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <tr><td>PostgreSQL differs from SQLite: sums don't come back as whole numbers, new ids are fetched differently, transactions work differently.</td><td><code>CAST(… AS BIGINT)</code>, <code>RETURNING id</code>, <code>conn.transaction()</code>; all backend tests now also run on PostgreSQL.</td><td>commit c8003b1</td></tr>
       <tr><td>Switching months quickly: a slow answer for an <em>old</em> choice could arrive after the new one and overwrite it.</td><td>Each load checks that its month is still the chosen one, and drops the answer ("stale") if not.</td><td>commit 934f5be, comment in <code>App.jsx</code></td></tr>
       <tr><td>Requests the backend couldn't read (a note that's a number, an id like <code>abc</code>, JSON without the JSON label).</td><td>All refused with one clear <code>invalid_request</code> error; tests for each.</td><td>commit 2d71ab5, <code>test_request_rules.py</code></td></tr>
+      <tr><td>Deploying the login version as it was would have broken the live site: the online database already had tables, so the start-up step would have left it alone, without a <code>users</code> table.</td><td>An in-place upgrade in one transaction with a row-count check, tested against the online database's exact old tables in a throwaway PostgreSQL in Docker, before anything went online.</td><td>build sessions; goal-spec criterion 34, <code>test_postgres_login_upgrade.py</code></td></tr>
       <tr><td>Changing an old laptop database's format could lose data.</td><td>A backup copy first, an all-or-nothing conversion, and a row-count check before and after.</td><td>commit 46d91f2, <code>test_migration.py</code></td></tr>
     </tbody>
   </table></div>
@@ -744,12 +789,14 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
   <h2>Known limitations</h2>
   <p class="lead">Each one is labelled with where it comes from: the goal spec, the build sessions, or my own reading of the code.</p>
 
-  <div class="limit"><h4>No login <span class="src rec">goal-spec</span></h4>
-    <p>Anyone with the link can see, add, change and delete all the data, and everyone shares the same data. Fine for a course demo; real personal spending should not be entered online.</p></div>
+  <div class="limit"><h4>Accounts are a demo <span class="src rec">goal-spec</span></h4>
+    <p>Anyone with the link can create an account. Don't reuse a password used anywhere else, and don't enter real personal spending online.</p></div>
+  <div class="limit"><h4>Login is for learning only <span class="src rec">goal-spec</span></h4>
+    <p>Nothing stops someone from guessing passwords many times. The token is kept in browser storage that a harmful script on the page could read, shared by every page under <code>shivanisujith.github.io</code>. A forgotten password can't be recovered. The online data from before accounts went to whoever signed up first after the upgrade.</p></div>
   <div class="limit"><h4>The free server sleeps <span class="src rec">goal-spec</span></h4>
     <p>After 15 minutes with no visitors, the first visit takes about a minute.</p></div>
   <div class="limit"><h4>Laptop and online data are separate <span class="src rec">goal-spec</span></h4>
-    <p>The online app started empty (just the six starting categories). Nothing is copied between the two.</p></div>
+    <p>Nothing is copied between the two.</p></div>
   <div class="limit"><h4>No backups <span class="src rec">goal-spec</span></h4>
     <p>The free plans have no backups set up. If the online data were deleted, it would be gone.</p></div>
   <div class="limit"><h4>Free-plan size limit <span class="src rec">goal-spec</span></h4>
@@ -758,7 +805,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <p>Render's auto-deploy didn't trigger, so backend changes only go live after someone deploys them by hand in Render. GitHub Actions only deploys the page, so the page and backend can briefly be out of step.</p></div>
 
   <div class="limit inferred"><h4>No protection against abuse <span class="src inf">My inference</span></h4>
-    <p>Nothing limits how many requests someone can send (no rate limiting), so a script could fill the shared demo with junk or delete everything.</p></div>
+    <p>Nothing limits how many requests someone can send (no rate limiting), so a script could create endless accounts or keep guessing passwords.</p></div>
   <div class="limit inferred"><h4>Rare clashes between simultaneous users <span class="src inf">My inference</span></h4>
     <p>Some checks and the change that follows are separate steps. Two people acting at the same instant could, in theory, get past a check like "at most 20 categories". The database's own rules still catch duplicate names and missing categories, but that would show as a "server error" rather than a friendly message.</p></div>
   <div class="limit inferred"><h4>One limit for every month <span class="src rec">backend-spec</span></h4>
@@ -800,6 +847,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <dt id="g-ist">IST</dt><dd>India Standard Time, 5½ hours ahead of UTC.</dd>
     <dt id="g-javascript">JavaScript</dt><dd>The programming language that browsers run. It makes pages interactive.</dd>
     <dt id="g-jsdom">jsdom</dt><dd>A pretend browser that runs inside the test program, so page tests don’t need a real browser.</dd>
+    <dt id="g-localstorage">localStorage</dt><dd>A small storage area the browser keeps for each website, which survives reloading the page. The login token is kept there.</dd>
     <dt id="g-json">JSON</dt><dd>A simple text format for data, made of names and values: {&quot;amount_paise&quot;: 1250, &quot;category&quot;: &quot;Food&quot;}.</dd>
     <dt id="g-lint">Lint</dt><dd>A tool that reads code without running it and flags likely mistakes. Here: oxlint.</dd>
     <dt id="g-migration">Migration</dt><dd>A one-time step that converts an older database to a newer format, keeping all its data.</dd>
@@ -808,6 +856,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <dt id="g-neon">Neon</dt><dd>A company that hosts PostgreSQL databases online.</dd>
     <dt id="g-origin">Origin</dt><dd>The &quot;home address&quot; of a web page: its scheme and domain, e.g. https://shivanisujith.github.io.</dd>
     <dt id="g-paise">Paise</dt><dd>1 rupee = 100 paise. Storing Rs 12.50 as 1250 paise keeps money in whole numbers, which computers handle exactly.</dd>
+    <dt id="g-hash">Password hash</dt><dd>A scrambled, one-way fingerprint of a password. The backend can check a typed password against it, but nobody can turn it back into the password. Made here with Argon2.</dd>
     <dt id="g-postgresql">PostgreSQL</dt><dd>A widely used database that runs as its own server program. Used online, hosted by Neon.</dd>
     <dt id="g-preflight">Preflight</dt><dd>A small permission-check request (method OPTIONS) the browser sends on its own, before certain cross-origin requests such as ones carrying JSON.</dd>
     <dt id="g-push">Push</dt><dd>Uploading your saved changes (commits) from your laptop to GitHub.</dd>
@@ -821,15 +870,17 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <dt id="g-response">Response</dt><dd>The server’s reply to a request: a status code (did it work?) and usually some data.</dd>
     <dt id="g-server">Server</dt><dd>A computer that stays switched on and connected to the internet, waiting to answer requests.</dd>
     <dt id="g-container">Service container</dt><dd>A throwaway mini computer started just for one CI run, here running PostgreSQL, and deleted afterwards.</dd>
+    <dt id="g-session">Session</dt><dd>One &quot;logged-in&quot; period. It starts when you log in or sign up and ends when you log out or after 7 days.</dd>
     <dt id="g-spec">Spec (specification)</dt><dd>A written description of exactly what the software must do, agreed before the code is written.</dd>
     <dt id="g-sql">SQL</dt><dd>The language used to talk to a database, e.g. SELECT * FROM expenses WHERE date = ‘2026-10-16’.</dd>
     <dt id="g-sqlite">SQLite</dt><dd>A database that is just a single file, with no separate server. Used on the laptop and in tests.</dd>
     <dt id="g-static">Static site</dt><dd>A website whose files are the same for every visitor. The host just hands the files out; it runs no code of its own.</dd>
-    <dt id="g-status">Status code</dt><dd>A number in every response saying how it went: 200 OK, 201 Created, 204 done (nothing to send back), 404 not found, 422 your input broke a rule, 500 the server broke.</dd>
+    <dt id="g-status">Status code</dt><dd>A number in every response saying how it went: 200 OK, 201 Created, 204 done (nothing to send back), 401 not logged in, 404 not found, 422 your input broke a rule, 500 the server broke.</dd>
     <dt id="g-table">Table</dt><dd>Like one sheet in a spreadsheet: rows of records, each with the same columns.</dd>
     <dt id="g-timeout">Timeout</dt><dd>A maximum wait. If no answer arrives in time, the request is given up on.</dd>
+    <dt id="g-token">Token</dt><dd>A long random pass the backend gives the browser when you log in. The browser shows it with every request to prove who it is, like a wristband at an event.</dd>
     <dt id="g-transaction">Transaction</dt><dd>A group of database changes that happen all together or not at all, so a failure halfway leaves nothing half-done.</dd>
-    <dt id="g-index">Unique index</dt><dd>A lookup structure that makes searching fast. A unique one also forbids duplicates, here duplicate category names (ignoring capitals).</dd>
+    <dt id="g-index">Unique index</dt><dd>A lookup structure that makes searching fast. A unique one also forbids duplicates, here duplicate category names within one account (ignoring capitals).</dd>
     <dt id="g-utc">UTC</dt><dd>Coordinated Universal Time: the world’s reference clock. Servers usually run on it.</dd>
     <dt id="g-validation">Validation</dt><dd>Checking input against the rules before accepting it, e.g. &quot;amount must be more than 0&quot;.</dd>
     <dt id="g-vite">Vite</dt><dd>A tool for building web pages. While developing, it serves the page on your laptop; for publishing, it bundles all the code files into a few small, fast ones.</dd>
@@ -839,7 +890,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 </section>
 
 <footer>
-  Written from <code>specs/</code>, the code and the git history at commit 028b0c6 (16 October 2026). Nothing here changes how the app works.
+  Written from <code>specs/</code>, the code and the git history at commit 6680bd7 (16 October 2026), when login went live. Nothing here changes how the app works.
   · <a href="https://shivanisujith.github.io/expense-tracker/">Live app</a>
   · <a href="https://github.com/shivanisujith/expense-tracker">GitHub repo</a>
 </footer>
@@ -861,7 +912,7 @@ const GLOSSARY = {
   api: ['API', 'Application Programming Interface: the agreed list of requests the backend understands and what it answers. Here it is written down in specs/api-contract-spec.md.'],
   endpoint: ['Endpoint', 'One address in the API that does one job, like /api/expenses (list or add expenses).'],
   json: ['JSON', 'A simple text format for data, made of names and values: {"amount_paise": 1250, "category": "Food"}.'],
-  status: ['Status code', 'A number in every response saying how it went: 200 OK, 201 Created, 204 done (nothing to send back), 404 not found, 422 your input broke a rule, 500 the server broke.'],
+  status: ['Status code', 'A number in every response saying how it went: 200 OK, 201 Created, 204 done (nothing to send back), 401 not logged in, 404 not found, 422 your input broke a rule, 500 the server broke.'],
   react: ['React', 'A popular JavaScript library for building pages out of reusable pieces called components (the popup, the card, the banner…).'],
   javascript: ['JavaScript', 'The programming language that browsers run. It makes pages interactive.'],
   vite: ['Vite', 'A tool for building web pages. While developing, it serves the page on your laptop; for publishing, it bundles all the code files into a few small, fast ones.'],
@@ -899,7 +950,7 @@ const GLOSSARY = {
   backup: ['Backup', 'A copy of data kept somewhere safe, so it can be restored if the original is lost.'],
   fk: ['Reference (foreign key)', 'A database rule that a value must point at a row that really exists, e.g. an expense’s category_id must be a real category.'],
   checkc: ['CHECK rule', 'A rule written into a table itself, e.g. amount_paise > 0. The database refuses any row that breaks it.'],
-  index: ['Unique index', 'A lookup structure that makes searching fast. A unique one also forbids duplicates, here duplicate category names (ignoring capitals).'],
+  index: ['Unique index', 'A lookup structure that makes searching fast. A unique one also forbids duplicates, here duplicate category names within one account (ignoring capitals).'],
   connstr: ['Connection string', 'The full address of a database, including the username and password needed to get in.'],
   ci: ['CI (continuous integration)', 'Automatically running all the tests on every change, so problems are caught before they go live.'],
   pytest: ['pytest', 'The tool that runs the backend’s Python tests.'],
@@ -909,6 +960,10 @@ const GLOSSARY = {
   spec: ['Spec (specification)', 'A written description of exactly what the software must do, agreed before the code is written.'],
   criterion: ['Acceptance criterion', 'One checkable statement that must be true for the work to count as done, e.g. "an amount of 0 is refused".'],
   mutation: ['Mutation testing', 'Deliberately putting a small bug into working code to check that the tests catch it. If the tests still pass, they aren’t really testing that rule.'],
+  hash: ['Password hash', 'A scrambled, one-way fingerprint of a password. The backend can check a typed password against it, but nobody can turn it back into the password. Made here with Argon2.'],
+  session: ['Session', 'One "logged-in" period. It starts when you log in or sign up and ends when you log out or after 7 days.'],
+  token: ['Token', 'A long random pass the backend gives the browser when you log in. The browser shows it with every request to prove who it is, like a wristband at an event.'],
+  localstorage: ['localStorage', 'A small storage area the browser keeps for each website, which survives reloading the page. The login token is kept there.'],
   jsdom: ['jsdom', 'A pretend browser that runs inside the test program, so page tests don’t need a real browser.'],
 }
 
