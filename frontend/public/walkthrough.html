@@ -251,9 +251,9 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <a href="#why">Why an expense tracker</a>
     <a href="#big-picture">The big picture</a>
     <a href="#parts">The four parts</a>
-    <a href="#journey-add">Journey 1: adding an expense</a>
-    <a href="#journey-down">Journey 2: server unreachable</a>
-    <a href="#journey-login">Journey 3: signing up and logging in</a>
+    <a href="#journey-login">Journey 1: signing up and logging in</a>
+    <a href="#journey-add">Journey 2: adding an expense</a>
+    <a href="#journey-down">Journey 3: server unreachable</a>
     <a href="#built">How this was built</a>
     <a href="#limits">Known limitations</a>
     <a href="#glossary">Glossary</a>
@@ -401,7 +401,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <li><strong>Money is never a decimal number.</strong> When you type <code>12.50</code>, <code>money.js</code> splits the text at the dot and builds <code>1250</code> <a class="t" data-t="paise" href="#g-paise">paise</a> with whole numbers. It never multiplies a decimal by 100 <span class="src rec">code comment in money.js</span>, which avoids <a class="t" data-t="float" href="#g-float">floating-point</a> rounding errors.</li>
       <li><strong>The backend's address is a build setting</strong> called <code>VITE_API_BASE</code>. GitHub Actions fills it in with the Render address when it builds the online page; without it the laptop address <code>http://localhost:8000/api</code> is used <span class="src rec">frontend-spec, api.js</span>.</li>
       <li><strong>The "base path".</strong> GitHub Pages serves this project under <code>/expense-tracker/</code>, so the build tells Vite to put every file there. The laptop version uses <code>/</code> <span class="src rec">vite.config.js</span>.</li>
-      <li><strong>A 90-second wait, and a calm "waking up" note.</strong> See Journey 2 below <span class="src rec">api-contract-spec</span>.</li>
+      <li><strong>A 90-second wait, and a calm "waking up" note.</strong> See Journey 3 below <span class="src rec">api-contract-spec</span>.</li>
       <li><strong>Colours with a readability rule.</strong> Pink, cream, plum and sage, where every text colour meets the <a class="t" data-t="wcag" href="#g-wcag">WCAG AA</a> contrast standard, and red is used <em>only</em> for over-limit warnings and errors, so red always means "something's wrong" <span class="src rec">frontend-spec</span>.</li>
       <li><strong>The log in screen comes first.</strong> With no saved <a class="t" data-t="token" href="#g-token">token</a>, the page shows the log in screen instead of the dashboard. "Create an account" adds a short warning in normal text, not red, because it isn't an error: "This is a demo. Don't use a password you use anywhere else." <span class="src rec">frontend-spec</span>.</li>
       <li><strong>Popups use the browser's built-in <code>&lt;dialog&gt;</code></strong>, which handles blocking the page behind and the Escape key <span class="src rec">AddExpenseModal.jsx comment</span>. Clicking outside a popup does <em>not</em> close it, so typed details aren't lost by accident <span class="src rec">frontend-spec</span>.</li>
@@ -441,7 +441,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <p>Render is a hosting company that runs programs on its servers. Here it runs the backend: a <a class="t" data-t="python" href="#g-python">Python</a> program built with <a class="t" data-t="fastapi" href="#g-fastapi">FastAPI</a> (the code is in <code>backend/app/</code>). For every request it:</p>
     <ol>
       <li>checks that the page asking is allowed (<a class="t" data-t="cors" href="#g-cors">CORS</a>),</li>
-      <li>checks who is logged in, from the <a class="t" data-t="token" href="#g-token">token</a> sent with the request (Journey 3), and refuses with 401 if nobody is,</li>
+      <li>checks who is logged in, from the <a class="t" data-t="token" href="#g-token">token</a> sent with the request (Journey 1), and refuses with 401 if nobody is,</li>
       <li>checks the input against the rules (<a class="t" data-t="validation" href="#g-validation">validation</a>, in <code>validation.py</code>),</li>
       <li>reads or writes the database,</li>
       <li>adds up totals, works out who is over their limit and builds the "insight" line,</li>
@@ -605,9 +605,42 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 </section>
 
 <!-- ============================================================ -->
+<section class="box" id="journey-login">
+  <h2>Journey 1: signing up and logging in</h2>
+  <p class="lead">You open the live site for the first time and create an account. Here is what happens, and how the backend knows it's you on every request after that.</p>
+
+  <ol class="journey">
+    <li><span class="where w-browser">Browser</span><strong>The log in screen shows.</strong> There's no saved token, so the page shows a cream box with Username and Password instead of the dashboard <span class="src rec">frontend-spec</span>.</li>
+    <li><span class="where w-browser">Browser</span><strong>You click "New here? Create an account".</strong> The heading changes, and a warning appears: "This is a demo. Don't use a password you use anywhere else." The page checks the rules first (username 3 to 20 letters, numbers or underscores; password 8 to 64 characters, not the same as the username) and sends nothing if one fails <span class="src rec">frontend-spec</span>. An eye button inside the Password field shows or hides what you typed; its label says what it will do ("Show password" / "Hide password"), and the password always starts hidden again after switching forms or a failed attempt <span class="src rec">frontend-spec, goal-spec criterion 35</span>.
+      <details><summary>Under the hood</summary><div><code>LoginScreen.jsx</code> switches <code>mode</code> to <code>'signup'</code>; <code>checkLoginForm()</code> in <code>loginForm.js</code> runs the checks.</div></details></li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>The page sends <code>POST /api/auth/signup</code></strong> with your username and password, over HTTPS so nobody in between can read it. This is one of only two requests that need no token.</li>
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks the rules again,</strong> lowercases the username (so "Shivani" and "shivani" are the same account), and refuses a taken one with "That username is already taken." <span class="src rec">backend-spec, rules A1 to A6</span>.</li>
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The account is created, in one all-or-nothing step</strong> <span class="src rec">backend-spec, rule A7</span>:
+      <ul>
+        <li>the password is turned into an Argon2 <a class="t" data-t="hash" href="#g-hash">hash</a>, and only the hash is saved;</li>
+        <li>the account gets its categories: the old unclaimed data if there is any (only the very first account after the upgrade), otherwise the six starting ones;</li>
+        <li>a <a class="t" data-t="session" href="#g-session">session</a> starts: a random <a class="t" data-t="token" href="#g-token">token</a> (32 random bytes) is made, and only its SHA-256 fingerprint is saved, with an end time exactly 7 days later.</li>
+      </ul>
+      <details><summary>Under the hood</summary><div><code>sign_up()</code> in <code>main.py</code>; <code>hash_password()</code> and <code>start_session()</code> in <code>accounts.py</code>. The claim is <code>UPDATE categories SET user_id = ? WHERE user_id IS NULL</code>.</div></details></li>
+    <li><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>The backend answers "201 Created"</strong> with the token. The page saves it in <a class="t" data-t="localstorage" href="#g-localstorage">localStorage</a> and opens the dashboard: "Hi shivani, here's your spending" <span class="src rec">frontend-spec</span>.</li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Every request after that carries the token</strong> in a header: <code>Authorization: Bearer &lt;token&gt;</code>. The backend fingerprints it, finds the session, and so knows whose data to use <span class="src rec">api-contract-spec</span>.
+      <details><summary>Under the hood</summary><div><code>logged_in_user()</code> in <code>accounts.py</code> runs before any other check (rule S5), so a request without a valid session never learns or changes anything.</div></details></li>
+    <li class="bad"><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>When the session ends, you're sent back to the log in screen.</strong> No token or an unknown one gives a <a class="t" data-t="status" href="#g-status">401</a> with "Please log in to continue."; after 7 days it's "Your session has expired. Please log in again." Using the app doesn't extend the 7 days <span class="src rec">goal-spec, criteria 30 and 31</span>.</li>
+    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Logging out</strong> asks the backend to delete the session, then removes the token and clears the dashboard, even if the server can't be reached. The old token can't be used again <span class="src rec">frontend-spec, goal-spec criterion 29</span>.</li>
+  </ol>
+
+  <h3>Why it's built this way</h3>
+  <ul>
+    <li><strong>One message for a wrong username and a wrong password:</strong> "Username or password is incorrect.", "so it doesn't reveal which usernames exist" <span class="src rec">goal-spec, criterion 28</span>.</li>
+    <li><strong>Hashes, not passwords; fingerprints, not tokens.</strong> Someone who got a copy of the database still couldn't read a password or log in as anyone <span class="src rec">backend-spec</span>.</li>
+    <li><strong>The old data goes to the first sign-up.</strong> The online app had data before accounts existed, and it had to belong to someone. The first account to sign up after the upgrade takes all of it; everyone after that starts with six empty categories <span class="src rec">goal-spec</span>.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
 <section class="box" id="journey-add">
-  <h2>Journey 1: adding an expense</h2>
-  <p class="lead">You're logged in, and you add "Lunch, Rs 12.50, Food, today" on the live site. Here is everything that happens, in order. Open "Under the hood" for the file and function involved.</p>
+  <h2>Journey 2: adding an expense</h2>
+  <p class="lead">You're logged in (Journey 1), and you add "Lunch, Rs 12.50, Food, today" on the live site. Here is everything that happens, in order. Open "Under the hood" for the file and function involved.</p>
   <p><span class="where w-browser">Browser</span><span class="where w-render">Render</span><span class="where w-neon">Neon</span>: these labels show where each step happens.</p>
 
   <ol class="journey">
@@ -625,9 +658,9 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
       <details><summary>Under the hood</summary><div><code>CORSMiddleware</code> in <code>main.py</code> allows the methods GET, POST, PUT, DELETE and the <code>Content-Type</code> and <code>Authorization</code> headers. The browser does the preflight on its own; the app's code never sees it.</div></details></li>
 
     <li><span class="where w-render">Render</span><strong>If the server was asleep, it wakes up first</strong> (about a minute). When it starts it runs <code>init_db()</code>, which sees the tables already exist and changes nothing.
-      <details><summary>Under the hood</summary><div><code>lifespan()</code> in <code>main.py</code> runs at start-up and calls <code>db.init_db()</code> → <code>_init_postgres()</code>. If the wait goes past 5 seconds, the page shows "Waking up the server…" (Journey 2).</div></details></li>
+      <details><summary>Under the hood</summary><div><code>lifespan()</code> in <code>main.py</code> runs at start-up and calls <code>db.init_db()</code> → <code>_init_postgres()</code>. If the wait goes past 5 seconds, the page shows "Waking up the server…" (Journey 3).</div></details></li>
 
-    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks every rule again.</strong> First it checks your token: no valid session means a 401 and nothing else happens (Journey 3). Then it loads <em>your</em> current category names from the database, then checks in a fixed order: amount (a whole number, more than 0, at most Rs 10 crore), category (exactly a current name), date (a real date, not after today in IST), note (100 characters at most, after trimming spaces).
+    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks every rule again.</strong> First it checks your token: no valid session means a 401 and nothing else happens (Journey 1). Then it loads <em>your</em> current category names from the database, then checks in a fixed order: amount (a whole number, more than 0, at most Rs 10 crore), category (exactly a current name), date (a real date, not after today in IST), note (100 characters at most, after trimming spaces).
       <details><summary>Under the hood</summary><div><code>add_expense()</code> in <code>main.py</code> calls <code>validate_expense()</code> in <code>validation.py</code>. The first failure raises an <code>ApiError</code>, sent back as a 422 with the error object, and nothing is saved.</div></details></li>
 
     <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The expense is saved.</strong> One SQL <code>INSERT</code> inside a transaction; the database gives the new row an id and checks its own safety rules too.
@@ -647,7 +680,7 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
 
 <!-- ============================================================ -->
 <section class="box" id="journey-down">
-  <h2>Journey 2: when the server can't be reached</h2>
+  <h2>Journey 3: when the server can't be reached</h2>
   <p class="lead">The backend is stopped, asleep, or the network is down. The rule: the page must never be blank or broken, and must say clearly what's wrong <span class="src rec">goal-spec, criterion 8</span>.</p>
 
   <p class="scenario">Scenario A: you open the page and the backend doesn't answer</p>
@@ -679,39 +712,6 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <li><strong>How it's tested:</strong> automated tests fake an unreachable server (<code>wakingNote.test.jsx</code>, <code>App.test.jsx</code>). Criterion 8 is also checked by hand: on the laptop by stopping the backend with Ctrl+C, and online by clicking <em>Suspend</em> on the Render service, then <em>Resume</em> <span class="src rec">frontend-spec, section 6</span>.</li>
   </ul>
   <p><strong>Gotcha:</strong> a CORS refusal also makes <code>fetch</code> fail without an answer, so a wrong <code>ALLOWED_ORIGINS</code> setting on Render would show up as "Can't reach the server" even though the server is running <span class="src inf">My inference, from api.js</span>.</p>
-</section>
-
-<!-- ============================================================ -->
-<section class="box" id="journey-login">
-  <h2>Journey 3: signing up and logging in</h2>
-  <p class="lead">You open the live site for the first time and create an account. Here is what happens, and how the backend knows it's you on every request after that.</p>
-
-  <ol class="journey">
-    <li><span class="where w-browser">Browser</span><strong>The log in screen shows.</strong> There's no saved token, so the page shows a cream box with Username and Password instead of the dashboard <span class="src rec">frontend-spec</span>.</li>
-    <li><span class="where w-browser">Browser</span><strong>You click "New here? Create an account".</strong> The heading changes, and a warning appears: "This is a demo. Don't use a password you use anywhere else." The page checks the rules first (username 3 to 20 letters, numbers or underscores; password 8 to 64 characters, not the same as the username) and sends nothing if one fails <span class="src rec">frontend-spec</span>. An eye button inside the Password field shows or hides what you typed; its label says what it will do ("Show password" / "Hide password"), and the password always starts hidden again after switching forms or a failed attempt <span class="src rec">frontend-spec, goal-spec criterion 35</span>.
-      <details><summary>Under the hood</summary><div><code>LoginScreen.jsx</code> switches <code>mode</code> to <code>'signup'</code>; <code>checkLoginForm()</code> in <code>loginForm.js</code> runs the checks.</div></details></li>
-    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>The page sends <code>POST /api/auth/signup</code></strong> with your username and password, over HTTPS so nobody in between can read it. This is one of only two requests that need no token.</li>
-    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The backend checks the rules again,</strong> lowercases the username (so "Shivani" and "shivani" are the same account), and refuses a taken one with "That username is already taken." <span class="src rec">backend-spec, rules A1 to A6</span>.</li>
-    <li><span class="where w-render">Render</span><span class="where w-neon">Neon</span><strong>The account is created, in one all-or-nothing step</strong> <span class="src rec">backend-spec, rule A7</span>:
-      <ul>
-        <li>the password is turned into an Argon2 <a class="t" data-t="hash" href="#g-hash">hash</a>, and only the hash is saved;</li>
-        <li>the account gets its categories: the old unclaimed data if there is any (only the very first account after the upgrade), otherwise the six starting ones;</li>
-        <li>a <a class="t" data-t="session" href="#g-session">session</a> starts: a random <a class="t" data-t="token" href="#g-token">token</a> (32 random bytes) is made, and only its SHA-256 fingerprint is saved, with an end time exactly 7 days later.</li>
-      </ul>
-      <details><summary>Under the hood</summary><div><code>sign_up()</code> in <code>main.py</code>; <code>hash_password()</code> and <code>start_session()</code> in <code>accounts.py</code>. The claim is <code>UPDATE categories SET user_id = ? WHERE user_id IS NULL</code>.</div></details></li>
-    <li><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>The backend answers "201 Created"</strong> with the token. The page saves it in <a class="t" data-t="localstorage" href="#g-localstorage">localStorage</a> and opens the dashboard: "Hi shivani, here's your spending" <span class="src rec">frontend-spec</span>.</li>
-    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Every request after that carries the token</strong> in a header: <code>Authorization: Bearer &lt;token&gt;</code>. The backend fingerprints it, finds the session, and so knows whose data to use <span class="src rec">api-contract-spec</span>.
-      <details><summary>Under the hood</summary><div><code>logged_in_user()</code> in <code>accounts.py</code> runs before any other check (rule S5), so a request without a valid session never learns or changes anything.</div></details></li>
-    <li class="bad"><span class="where w-render">Render</span><span class="where w-browser">Browser</span><strong>When the session ends, you're sent back to the log in screen.</strong> No token or an unknown one gives a <a class="t" data-t="status" href="#g-status">401</a> with "Please log in to continue."; after 7 days it's "Your session has expired. Please log in again." Using the app doesn't extend the 7 days <span class="src rec">goal-spec, criteria 30 and 31</span>.</li>
-    <li><span class="where w-browser">Browser</span><span class="where w-render">Render</span><strong>Logging out</strong> asks the backend to delete the session, then removes the token and clears the dashboard, even if the server can't be reached. The old token can't be used again <span class="src rec">frontend-spec, goal-spec criterion 29</span>.</li>
-  </ol>
-
-  <h3>Why it's built this way</h3>
-  <ul>
-    <li><strong>One message for a wrong username and a wrong password:</strong> "Username or password is incorrect.", "so it doesn't reveal which usernames exist" <span class="src rec">goal-spec, criterion 28</span>.</li>
-    <li><strong>Hashes, not passwords; fingerprints, not tokens.</strong> Someone who got a copy of the database still couldn't read a password or log in as anyone <span class="src rec">backend-spec</span>.</li>
-    <li><strong>The old data goes to the first sign-up.</strong> The online app had data before accounts existed, and it had to belong to someone. The first account to sign up after the upgrade takes all of it; everyone after that starts with six empty categories <span class="src rec">goal-spec</span>.</li>
-  </ul>
 </section>
 
 <!-- ============================================================ -->
