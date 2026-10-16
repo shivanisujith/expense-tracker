@@ -142,7 +142,7 @@ function ExpenseItem({
   return (
     <li className="expense-item">
       <div className="expense-row">
-        <CategoryIconFor categoryId={expense.category_id} />
+        <CategoryIconFor iconValue={expense.icon} />
         <div className="expense-text">
           <span className="expense-title">{title}</span>
           <span className="expense-meta">{meta}</span>

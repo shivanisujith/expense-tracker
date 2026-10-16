@@ -7,10 +7,11 @@ afterEach(cleanup)
 
 const noop = () => {}
 
-function row(id, name, spent) {
+function row(id, name, spent, icon = 'tag') {
   return {
     category_id: id,
     category: name,
+    icon,
     spent_paise: spent,
     limit_paise: null,
     remaining_paise: null,
@@ -54,7 +55,7 @@ test('each card shows its category icon, just before the name', () => {
   renderCards({
     month: '2026-10',
     total_spent_paise: 0,
-    categories: [row(1, 'Food', 0), row(4, 'Bills', 0), row(7, 'Pets', 0)],
+    categories: [row(1, 'Food', 0, 'food'), row(4, 'Bills', 0, 'bills'), row(7, 'Pets', 0, 'tag')],
   })
 
   expect(cardIcon('Food').dataset.icon).toBe('food')
@@ -67,15 +68,27 @@ test('the icon follows the category: renamed Food keeps it, a new "Food" gets th
   renderCards({
     month: '2026-10',
     total_spent_paise: 0,
-    categories: [row(1, 'Groceries', 0), row(8, 'Food', 0)],
+    categories: [row(1, 'Groceries', 0, 'food'), row(8, 'Food', 0, 'tag')],
   })
 
   expect(cardIcon('Groceries').dataset.icon).toBe('food')
   expect(cardIcon('Food').dataset.icon).toBe('tag')
 })
 
+test('the icon comes from the icon value, not the id (each account has its own ids)', () => {
+  renderCards({
+    month: '2026-10',
+    total_spent_paise: 0,
+    categories: [row(9, 'Food', 0, 'food'), row(12, 'Bills', 0, 'bills'), row(1, 'Pets', 0, 'tag')],
+  })
+
+  expect(cardIcon('Food').dataset.icon).toBe('food')
+  expect(cardIcon('Bills').dataset.icon).toBe('bills')
+  expect(cardIcon('Pets').dataset.icon).toBe('tag')
+})
+
 test('icons are hidden from screen readers, and the circle uses its tone', () => {
-  renderCards({ month: '2026-10', total_spent_paise: 0, categories: [row(1, 'Food', 0)] })
+  renderCards({ month: '2026-10', total_spent_paise: 0, categories: [row(1, 'Food', 0, 'food')] })
 
   const icon = cardIcon('Food')
   expect(icon.getAttribute('aria-hidden')).toBe('true')
@@ -85,7 +98,7 @@ test('icons are hidden from screen readers, and the circle uses its tone', () =>
 })
 
 test('an over-limit card keeps the icon tint; it never turns red', () => {
-  const over = { ...row(4, 'Bills', 6000), limit_paise: 5000, remaining_paise: -1000, over_limit: true }
+  const over = { ...row(4, 'Bills', 6000, 'bills'), limit_paise: 5000, remaining_paise: -1000, over_limit: true }
   renderCards({ month: '2026-10', total_spent_paise: 6000, categories: [over] })
 
   expect(cardIcon('Bills').style.backgroundColor).toBe('rgb(227, 234, 224)') // #E3EAE0

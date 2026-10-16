@@ -38,7 +38,16 @@ function renderList(expenses, status = 'loaded', monthProps = {}) {
 // --- Friendlier rows (specs/frontend-spec.md, "Expense list") ---
 
 function expense(changes) {
-  return { id: 1, amount_paise: 1250, category: 'Food', category_id: 1, date: '2026-10-16', note: 'Lunch', ...changes }
+  return {
+    id: 1,
+    amount_paise: 1250,
+    category: 'Food',
+    category_id: 1,
+    icon: 'food',
+    date: '2026-10-16',
+    note: 'Lunch',
+    ...changes,
+  }
 }
 
 function rows(container) {
@@ -133,13 +142,14 @@ test('"All months" with no expenses keeps the first-expense message', () => {
 
 // --- Category icons on rows ---
 
-test('each expense row shows its category icon, by category id', () => {
+test('each expense row shows its category icon, from the icon value (not the id)', () => {
   const { container } = renderList([
-    { id: 2, amount_paise: 500, category: 'Groceries', category_id: 1, date: '2026-10-07', note: '' },
-    { id: 1, amount_paise: 900, category: 'Pets', category_id: 7, date: '2026-10-06', note: 'Food' },
+    { id: 3, amount_paise: 500, category: 'Groceries', category_id: 1, icon: 'food', date: '2026-10-07', note: '' },
+    { id: 2, amount_paise: 700, category: 'Bills', category_id: 10, icon: 'bills', date: '2026-10-07', note: '' },
+    { id: 1, amount_paise: 900, category: 'Pets', category_id: 4, icon: 'tag', date: '2026-10-06', note: 'Food' },
   ])
 
   const icons = [...container.querySelectorAll('.expense-item .category-icon')]
-  expect(icons.map((icon) => icon.dataset.icon)).toEqual(['food', 'tag'])
+  expect(icons.map((icon) => icon.dataset.icon)).toEqual(['food', 'bills', 'tag'])
   expect(icons.every((icon) => icon.getAttribute('aria-hidden') === 'true')).toBe(true)
 })

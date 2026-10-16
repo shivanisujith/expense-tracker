@@ -17,7 +17,10 @@ in `specs/backend-spec.md`. How the frontend uses them is in
   - 200 OK: worked, and here is the data.
   - 201 Created: a new item was saved.
   - 204 No Content: worked, nothing to send back (used for delete).
-  - 404 Not Found: that item does not exist.
+  - 401 Unauthorized: you are not logged in, your session has ended, or
+    the username or password was wrong.
+  - 404 Not Found: that item does not exist (or belongs to someone
+    else, which looks exactly the same).
   - 422 Unprocessable: your input broke a rule; nothing was saved.
   - 500 Server Error: something went wrong inside the backend.
 
@@ -25,20 +28,36 @@ in `specs/backend-spec.md`. How the frontend uses them is in
 - **On the laptop:** `http://localhost:8000/api`
 - **Online:** `https://<render-name>.onrender.com/api` (the exact address
   is given by Render when the backend is created).
+- **Login version on the laptop:** `http://localhost:8001/api`, so it
+  never mixes with a normal server on port 8000.
 
-Everything in this contract is the same at both addresses.
+Everything in this contract is the same at every address.
 
 ## Which pages may use the backend (CORS)
 Browsers only let a page read the backend's answers if the backend allows
 that page's address. The backend allows:
 - On the laptop: `http://localhost:5173`.
 - Online: `https://shivanisujith.github.io` (the GitHub Pages site).
+- Login version on the laptop: `http://localhost:5174`.
 
 This comes from the `ALLOWED_ORIGINS` setting (see
 `specs/backend-spec.md`). Requests from other pages are not refused by the
 backend, but the browser hides the answers from them. This is not a
-security protection: the app has no login, so anyone can still use the
-API directly (see "Known Limitations" in `specs/goal-spec.md`).
+security protection by itself; the session token is what protects each
+account's data.
+
+## Logging in (sessions)
+- Sign up (endpoint 12) and log in (endpoint 13) answer with a `token`.
+- Every other endpoint needs that token in a header:
+  `Authorization: Bearer <token>`. (A **header** is a labelled extra line
+  sent with a request, separate from the body.)
+- Without a valid token, every endpoint except 12 and 13 answers **401**
+  with `not_logged_in`, or `session_expired` when the session has ended.
+  This happens before any other check, so nothing is read or changed.
+- A session ends 7 days after logging in, or when you log out.
+- Endpoints 1 to 11 only ever read or change the logged-in account's own
+  data. An id belonging to another account gives the same 404 as an id
+  that doesn't exist.
 
 ## General rules
 - All endpoints start with `/api`.
@@ -65,18 +84,31 @@ Every response that includes an expense uses this shape:
   "amount_paise": 1250,
   "category": "Food",
   "category_id": 1,
+  "icon": "food",
   "date": "2026-10-07",
   "note": "Lunch"
 }
 ```
 
 `note` is always text and is `""` when there is no note. `category_id` is
-the id of the expense's category; the frontend uses it for the category's
-icon. When adding or editing, only `category` (the name) is sent;
-`category_id` in a request is ignored like any other extra field.
+the id of the expense's category. `icon` is the category's icon (one of
+`food`, `transport`, `shopping`, `bills`, `entertainment`, `other`,
+`tag`); the frontend uses it to draw the icon. When adding or editing,
+only `category` (the name) is sent; `category_id` and `icon` in a request
+are ignored like any other extra field.
+
+## The session object
+Sign up and log in answer with:
+
+```json
+{"username": "shivani", "token": "q3Xb...long random text...", "expires_at": "2026-10-23T08:30:00Z"}
+```
+
+`username` is as saved (lowercase). `expires_at` is when the session ends,
+in UTC.
 
 ## The error object
-Every error response (404, 422, 500) uses this shape:
+Every error response (401, 404, 422, 500) uses this shape:
 
 ```json
 {
@@ -94,7 +126,8 @@ Every error response (404, 422, 500) uses this shape:
 
 If more than one field is wrong, the backend reports the first one found,
 checking in this order: amount_paise, category, date, note. For category
-endpoints the order is in `specs/backend-spec.md` (rule 21).
+endpoints the order is in `specs/backend-spec.md` (rule 21), and for sign
+up in rule A6.
 
 ### All error codes
 | Status | code              | field          | message                                          |
@@ -116,13 +149,22 @@ endpoints the order is in `specs/backend-spec.md` (rule 21).
 | 422    | invalid_month     | month          | Month must be a real month in YYYY-MM form. |
 | 422    | future_month      | month          | Month cannot be in the future.                   |
 | 422    | invalid_request   | null           | The request could not be read. Please try again. |
+| 422    | invalid_username  | username       | Username must be 3 to 20 characters, using only letters, numbers and underscores. |
+| 422    | username_taken    | username       | That username is already taken.                  |
+| 422    | password_too_short | password      | Password must be at least 8 characters.          |
+| 422    | password_too_long | password       | Password must be 64 characters or fewer.         |
+| 422    | password_same_as_username | password | Password can't be the same as your username. |
+| 401    | wrong_login       | null           | Username or password is incorrect.               |
+| 401    | not_logged_in     | null           | Please log in to continue.                       |
+| 401    | session_expired   | null           | Your session has expired. Please log in again.   |
 | 404    | expense_not_found | null           | This expense no longer exists.                   |
 | 404    | category_not_found | null          | This category no longer exists.                  |
 | 500    | server_error      | null           | Something went wrong on the server. Please try again. |
 
 `invalid_request` is used when the body is not valid JSON or is not a
-JSON object, when an id in the address is not a whole number, or when a
-note is given but is not text.
+JSON object, when an id in the address is not a whole number, when a
+note is given but is not text, or when a username or password is missing
+or is not text.
 
 Requests that send a body must say it is JSON (the
 `Content-Type: application/json` header). A body sent without it, or
@@ -137,6 +179,10 @@ The largest allowed amount or limit is `10000000000` paise
 
 ## Endpoints
 
+Endpoints 1 to 11 and 14 to 15 need a logged-in session (see "Logging
+in"), and each can also answer 401 `not_logged_in` or `session_expired`.
+That is not repeated under each one.
+
 ### 1. List expenses
 `GET /api/expenses` (all months) or `GET /api/expenses?month=2026-09`
 (one month)
@@ -147,9 +193,9 @@ that month. Newest date first. Same date: most recently saved first.
 **200 OK**
 ```json
 [
-  {"id": 8, "amount_paise": 50000, "category": "Bills", "category_id": 4, "date": "2026-10-07", "note": ""},
-  {"id": 7, "amount_paise": 1250, "category": "Food", "category_id": 1, "date": "2026-10-07", "note": "Lunch"},
-  {"id": 3, "amount_paise": 9900, "category": "Shopping", "category_id": 3, "date": "2026-09-28", "note": "Socks"}
+  {"id": 8, "amount_paise": 50000, "category": "Bills", "category_id": 4, "icon": "bills", "date": "2026-10-07", "note": ""},
+  {"id": 7, "amount_paise": 1250, "category": "Food", "category_id": 1, "icon": "food", "date": "2026-10-07", "note": "Lunch"},
+  {"id": 3, "amount_paise": 9900, "category": "Shopping", "category_id": 3, "icon": "shopping", "date": "2026-09-28", "note": "Socks"}
 ]
 ```
 No expenses (in that month): `[]`. A month after the current one is
@@ -224,16 +270,16 @@ popup. "Current month" is worked out in IST.
   "insight": {
     "previous_month": "2026-09",
     "difference_paise": -62000,
-    "biggest_categories": [{"category_id": 4, "category": "Bills"}]
+    "biggest_categories": [{"category_id": 4, "category": "Bills", "icon": "bills"}]
   },
   "categories": [
-    {"category_id": 1, "category": "Food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
-    {"category_id": 2, "category": "Transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category_id": 3, "category": "Shopping",      "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category_id": 4, "category": "Bills",         "spent_paise": 50000, "limit_paise": 40000,  "remaining_paise": -10000, "over_limit": true},
-    {"category_id": 5, "category": "Entertainment", "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category_id": 6, "category": "Other",         "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
-    {"category_id": 7, "category": "Pets",          "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false}
+    {"category_id": 1, "category": "Food",          "icon": "food",          "spent_paise": 1250,  "limit_paise": 500000, "remaining_paise": 498750, "over_limit": false},
+    {"category_id": 2, "category": "Transport",     "icon": "transport",     "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 3, "category": "Shopping",      "icon": "shopping",      "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 4, "category": "Bills",         "icon": "bills",         "spent_paise": 50000, "limit_paise": 40000,  "remaining_paise": -10000, "over_limit": true},
+    {"category_id": 5, "category": "Entertainment", "icon": "entertainment", "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 6, "category": "Other",         "icon": "other",         "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false},
+    {"category_id": 7, "category": "Pets",          "icon": "tag",           "spent_paise": 0,     "limit_paise": null,   "remaining_paise": null,   "over_limit": false}
   ]
 }
 ```
@@ -282,10 +328,11 @@ There is no endpoint to remove a limit on its own. Deleting a category
 
 **201 Created**
 ```json
-{"id": 7, "name": "Pets"}
+{"id": 7, "name": "Pets", "icon": "tag"}
 ```
 The name is saved with spaces at the start and end removed. The new
-category goes at the end of the category order, with no limit.
+category goes at the end of the category order, with no limit and the
+`tag` icon.
 
 **Errors**
 - 422 `category_name_missing`, `category_name_too_long`,
@@ -306,10 +353,10 @@ category goes at the end of the category order, with no limit.
 
 **200 OK**
 ```json
-{"id": 1, "name": "Groceries"}
+{"id": 1, "name": "Groceries", "icon": "food"}
 ```
-The category keeps its id, its place in the order, its expenses, and its
-limit. From now on, its expenses show the new name.
+The category keeps its id, its place in the order, its icon, its
+expenses, and its limit. From now on, its expenses show the new name.
 
 **Errors**
 - 404 `category_not_found` if no category has that id.
@@ -361,7 +408,7 @@ their date. Works for the current month and any earlier month.
   "insight": {
     "previous_month": "2026-08",
     "difference_paise": null,
-    "biggest_categories": [{"category_id": 1, "category": "Food"}]
+    "biggest_categories": [{"category_id": 1, "category": "Food", "icon": "food"}]
   }
 }
 ```
@@ -378,6 +425,69 @@ equals the summary's `insight`.
   ```
 - 500 `server_error`.
 
+### 12. Sign up
+`POST /api/auth/signup` (no token needed)
+
+**Request body**
+```json
+{"username": "Shivani", "password": "a long password"}
+```
+
+**201 Created**: the session object (see above), so the new account is
+logged in straight away. The username is saved in lowercase
+(`"shivani"`). The account gets the six starting categories, or the old
+unclaimed data if there is any (see `specs/backend-spec.md`).
+
+**Errors**
+- 422 `invalid_username`, `username_taken`, `password_too_short`,
+  `password_too_long`, `password_same_as_username`, or `invalid_request`,
+  checked in the order of rule A6. Example:
+  ```json
+  {"error": {"code": "username_taken", "message": "That username is already taken.", "field": "username"}}
+  ```
+- 500 `server_error`.
+
+### 13. Log in
+`POST /api/auth/login` (no token needed)
+
+**Request body**: same as Sign up.
+
+**200 OK**: the session object, with a new token.
+
+**Errors**
+- 401 `wrong_login` if the username doesn't exist or the password is
+  wrong (the same answer for both). Example:
+  ```json
+  {"error": {"code": "wrong_login", "message": "Username or password is incorrect.", "field": null}}
+  ```
+- 422 `invalid_request` if the username or password is missing or not
+  text.
+- 500 `server_error`.
+
+### 14. Log out
+`POST /api/auth/logout`
+
+**204 No Content**: the session is ended, and its token no longer works.
+Also 204 when the token is missing, unknown, or already expired, because
+the person is logged out either way (this is the one endpoint that never
+answers 401).
+
+Errors: 500 only.
+
+### 15. Who is logged in
+`GET /api/auth/me`
+
+**200 OK**
+```json
+{"username": "shivani"}
+```
+The page uses this when it opens, to check that a saved token still
+works.
+
+**Errors**
+- 401 `not_logged_in` or `session_expired`.
+- 500 `server_error`.
+
 ---
 
 ## The insight object
@@ -389,13 +499,13 @@ expense date (rules in `specs/backend-spec.md`, "Insight for a month").
 |---|---|
 | `previous_month` | The month before, as `YYYY-MM` (`"2025-12"` before `"2026-01"`). |
 | `difference_paise` | Shown month's total minus the month before's, in whole paise. Negative = less spent, 0 = the same. `null` when the month before has no expenses. |
-| `biggest_categories` | `[{"category_id", "category"}, …]`: the categories with the most spent in the shown month, in category order (several only on an exact tie). `[]` when the shown month has no expenses. |
+| `biggest_categories` | `[{"category_id", "category", "icon"}, …]`: the categories with the most spent in the shown month, in category order (several only on an exact tie). `[]` when the shown month has no expenses. |
 
 Examples (shown month October 2026):
 - October Rs 512.50 with Bills biggest, September Rs 1,132.50:
-  `{"previous_month": "2026-09", "difference_paise": -62000, "biggest_categories": [{"category_id": 4, "category": "Bills"}]}`
+  `{"previous_month": "2026-09", "difference_paise": -62000, "biggest_categories": [{"category_id": 4, "category": "Bills", "icon": "bills"}]}`
 - First month with expenses, Food and Bills tied:
-  `{"previous_month": "2026-09", "difference_paise": null, "biggest_categories": [{"category_id": 1, "category": "Food"}, {"category_id": 4, "category": "Bills"}]}`
+  `{"previous_month": "2026-09", "difference_paise": null, "biggest_categories": [{"category_id": 1, "category": "Food", "icon": "food"}, {"category_id": 4, "category": "Bills", "icon": "bills"}]}`
 - Nothing in October or September:
   `{"previous_month": "2026-09", "difference_paise": null, "biggest_categories": []}`
 

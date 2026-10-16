@@ -107,7 +107,9 @@ def test_one_biggest_category_with_its_id_and_name(client):
     add(client, 2000, "2026-10-02", category="Food")
     add(client, 4999, "2026-10-03", category="Bills")
 
-    assert summary_insight(client)["biggest_categories"] == [{"category_id": 1, "category": "Food"}]
+    assert summary_insight(client)["biggest_categories"] == [
+        {"category_id": 1, "category": "Food", "icon": "food"}
+    ]
 
 
 def test_a_tie_names_every_tied_category_in_category_order(client):
@@ -129,7 +131,9 @@ def test_biggest_category_uses_the_current_name_after_a_rename(client):
     add(client, 500, "2026-10-01", category="Food")
     client.put("/api/categories/1", json={"name": "Groceries"})
 
-    assert summary_insight(client)["biggest_categories"] == [{"category_id": 1, "category": "Groceries"}]
+    assert summary_insight(client)["biggest_categories"] == [
+        {"category_id": 1, "category": "Groceries", "icon": "food"}
+    ]
 
 
 def test_biggest_category_can_be_one_you_created(client):
@@ -137,7 +141,9 @@ def test_biggest_category_can_be_one_you_created(client):
     add(client, 800, "2026-10-01", category="Pets")
     add(client, 700, "2026-10-01", category="Food")
 
-    assert summary_insight(client)["biggest_categories"] == [{"category_id": 7, "category": "Pets"}]
+    assert summary_insight(client)["biggest_categories"] == [
+        {"category_id": 7, "category": "Pets", "icon": "tag"}
+    ]
 
 
 def test_other_months_dont_affect_the_biggest_category(client):
@@ -162,7 +168,7 @@ def test_a_past_months_total_has_its_own_insight(client):
         "insight": {
             "previous_month": "2026-08",
             "difference_paise": 9310 - 20000,
-            "biggest_categories": [{"category_id": 1, "category": "Food"}],
+            "biggest_categories": [{"category_id": 1, "category": "Food", "icon": "food"}],
         },
     }
 
@@ -199,6 +205,7 @@ def test_every_expense_has_its_category_id(client):
         "amount_paise": 1250,
         "category": "Bills",
         "category_id": 4,
+        "icon": "bills",
         "date": "2026-10-01",
         "note": "Phone",
     }

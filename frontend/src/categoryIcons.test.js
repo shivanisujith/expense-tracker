@@ -1,26 +1,27 @@
 // Category icons (specs/frontend-spec.md, "Category icons"): which icon and
-// colours each category gets, and that every pair passes the readability rule.
+// colours each category's icon value gets, and that every pair passes the
+// readability rule.
 import { expect, test } from 'vitest'
 import { CIRCLE_TONES, categoryIcon } from './categoryIcons.js'
 
 test.each([
-  [1, 'food', 'pink'],
-  [2, 'transport', 'sage'],
-  [3, 'shopping', 'beige'],
-  [4, 'bills', 'sage'],
-  [5, 'entertainment', 'pink'],
-  [6, 'other', 'beige'],
-])('starting category %i gets the %s icon on a %s circle', (id, icon, tone) => {
-  expect(categoryIcon(id)).toEqual({ icon, tone })
+  ['food', 'pink'],
+  ['transport', 'sage'],
+  ['shopping', 'beige'],
+  ['bills', 'sage'],
+  ['entertainment', 'pink'],
+  ['other', 'beige'],
+])('the %s icon value gets a %s circle', (icon, tone) => {
+  expect(categoryIcon(icon)).toEqual({ icon, tone })
 })
 
 test('every category you create gets the default tag on sage, whatever its name', () => {
-  for (const id of [7, 8, 20, 999]) expect(categoryIcon(id)).toEqual({ icon: 'tag', tone: 'sage' })
+  expect(categoryIcon('tag')).toEqual({ icon: 'tag', tone: 'sage' })
 })
 
-test('a missing or unreadable id gets the default icon, never an error', () => {
-  for (const id of [undefined, null, '1', 0, -1, 1.5]) {
-    expect(categoryIcon(id)).toEqual({ icon: 'tag', tone: 'sage' })
+test('an icon value the page doesn\'t know gets the tag, never an error', () => {
+  for (const value of [undefined, null, '', 'Food', 'pets', 1, 7, 'constructor', '__proto__']) {
+    expect(categoryIcon(value)).toEqual({ icon: 'tag', tone: 'sage' })
   }
 })
 

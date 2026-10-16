@@ -21,6 +21,11 @@ frontend checks below are only for convenience.
 - **Success message:** a short message such as "Expense added" that
   appears inside the box where the change was made, for a few seconds,
   then disappears by itself.
+- **Token:** the long random pass the backend gives after signing up or
+  logging in. The page sends it with every request to prove who is
+  logged in.
+- **localStorage:** a small storage area the browser keeps for each site,
+  which survives reloading the page.
 
 ## Where the page runs
 - **On the laptop:** `npm run dev` serves it at `http://localhost:5173`,
@@ -32,15 +37,99 @@ frontend checks below are only for convenience.
   when the page is built: GitHub Actions sets it to the Render address for
   the online build. When it isn't set, the laptop address is used. It is
   not a secret: anyone can see it in the page's code.
+- **Login version on the laptop:** started with
+  `VITE_API_BASE=http://localhost:8001/api npm run dev -- --port 5174`,
+  so it is served at `http://localhost:5174` and talks to the login
+  backend on port 8001, never to a normal server on port 8000.
+
+## Logging in
+
+### Log in screen
+When there is no valid saved token, the page shows the **log in screen**
+instead of the dashboard:
+- The page title as usual ("Expense Tracker"), with the subtitle
+  "Log in to see your spending · " and today's full date. No + Add
+  expense or Log out button.
+- The server banner and the waking note, as on the dashboard.
+- One cream box, about 400 pixels wide and centred, with:
+  - A heading: "Log in", or "Create an account".
+  - Only when creating an account, a short warning under the heading, in
+    normal text (not red, which means an error): "This is a demo. Don't
+    use a password you use anywhere else."
+  - **Username** and **Password** fields, each with a visible label above
+    it. The password is hidden as it is typed.
+  - One sage button: **Log in**, or **Create account**.
+  - A link-style button underneath to switch: "New here? Create an
+    account" / "Already have an account? Log in". Switching clears the
+    error messages but keeps what was typed.
+- When it opens, the cursor goes to the Username field. Pressing Enter in
+  either field sends the form.
+- A message from the backend that isn't about one field (such as
+  "Username or password is incorrect.", or "Your session has expired.
+  Please log in again." after being sent back here) shows in red at the
+  top of the box.
+
+### Frontend checks before sending
+If one fails, its message shows under its field and nothing is sent.
+- Username empty (after removing spaces at the ends): "Please enter a
+  username."
+- Password empty: "Please enter a password."
+- Only when creating an account, the backend's rules with the same
+  messages: "Username must be 3 to 20 characters, using only letters,
+  numbers and underscores.", "Password must be at least 8 characters.",
+  "Password must be 64 characters or fewer.", and "Password can't be the
+  same as your username."
+
+### States
+- **Sending:** the button shows "Logging in..." or "Creating account..."
+  and is disabled.
+- **Success:** the token is saved in localStorage, and the dashboard
+  opens and loads as usual.
+- **Refused (422):** the backend's message under the field named in
+  `field`, or at the top of the box if `field` is null. Keep what was
+  typed.
+- **Wrong login (401):** "Username or password is incorrect." at the top
+  of the box. The password field is cleared; the username is kept.
+- **Server error (500):** "Something went wrong on the server. Please try
+  again." at the top of the box.
+- **Can't reach server:** "Can't reach the server. Check that the backend
+  is running, then try again." at the top of the box, and the server
+  banner.
+
+### Opening the page
+- No saved token: the log in screen.
+- A saved token: the page asks who is logged in (`GET /api/auth/me`).
+  While waiting, the page title shows with "Loading..." underneath. If it
+  answers, the dashboard opens; if it answers 401, the token is removed
+  and the log in screen opens (with "Your session has expired. Please log
+  in again." for `session_expired`); if the server can't be reached, the
+  log in screen shows with the server banner, and **Try again** asks
+  again.
+
+### Logging out
+- A light **Log out** button sits in the title row, just left of
+  **+ Add expense**. (On phones, both buttons move below the subtitle.)
+- Clicking it asks the backend to end the session
+  (`POST /api/auth/logout`), then, whatever the answer (even if the
+  server can't be reached), removes the token from localStorage, clears
+  everything the dashboard had loaded, and shows the log in screen.
+
+### When the session ends while using the page
+- The token is sent with every request, in the `Authorization` header.
+- If **any** request answers **401**, the page removes the token, closes
+  any open popup (anything typed in it is lost), clears the dashboard's
+  data, and shows the log in screen with the backend's message (for
+  example "Your session has expired. Please log in again.").
+- The dashboard's data is never shown to someone who isn't logged in.
 
 ## Screen layout
 The app is **one page** laid out as a dashboard, with these parts:
 
 1. **Page title**: "Expense Tracker", with a greeting and today's full
-   date underneath, for example "Hi there, here's your spending ·
+   date underneath, for example "Hi shivani, here's your spending ·
    Thursday, 8 October 2026". It sits directly on the pink page, with no
-   bar or box behind it. A **+ Add expense** button sits at the right end
-   of this title row.
+   bar or box behind it. A **Log out** button and a **+ Add expense**
+   button sit at the right end of this title row.
 2. **Server banner**: hidden unless the server can't be reached.
 3. **Spent this month box**: a highlight box showing the total spent this
    month across all categories, a short insight line, and arrows to look
@@ -180,10 +269,10 @@ popup** (see section 5).
   on the pink background, lined up with the left edge of the boxes below.
   - **Line 1:** "Expense Tracker" in large, bold text, in the main deep
     plum text colour.
-  - **Line 2,** smaller, underneath: "Hi there, here's your spending · "
-    followed by today's full date, for example "Hi there, here's your
-    spending · Thursday, 8 October 2026" (weekday, day, month name, year).
-    It uses the page subtitle plum.
+  - **Line 2,** smaller, underneath: "Hi ", the logged-in username,
+    ", here's your spending · " and today's full date, for example "Hi
+    shivani, here's your spending · Thursday, 8 October 2026" (weekday,
+    day, month name, year). It uses the page subtitle plum.
 - The date comes from the browser's own clock, so it shows even before
   the backend answers or when the server can't be reached.
 - **+ Add expense button:** a solid sage button, like the other main
@@ -345,18 +434,20 @@ popup** (see section 5).
   categories always keep their icons, even after being renamed (Food
   renamed to Groceries keeps the fork and knife). Every category created
   in the Manage categories popup gets the default icon, whatever its name,
-  even "Food". The starting six are the categories with ids 1 to 6 (see
-  `specs/backend-spec.md`).
+  even "Food". The page picks the icon from the category's `icon` value
+  sent by the backend (see `specs/api-contract-spec.md`), not from its
+  id, because each account's starting six have different ids. An `icon`
+  value the page doesn't know gets the tag.
 
-| Category (starting id) | Icon | Circle | Icon colour |
+| Category (`icon` value) | Icon | Circle | Icon colour |
 |---|---|---|---|
-| Food (1) | fork and knife | soft pink `#F6DCE6` | plum `#553047` |
-| Transport (2) | bus | light sage `#E3EAE0` | deep sage `#4F6F52` |
-| Shopping (3) | shopping bag | warm beige `#EFE3CF` | dark brown `#5C4033` |
-| Bills (4) | receipt | light sage `#E3EAE0` | deep sage `#4F6F52` |
-| Entertainment (5) | film ticket | soft pink `#F6DCE6` | plum `#553047` |
-| Other (6) | three dots | warm beige `#EFE3CF` | dark brown `#5C4033` |
-| Any category you create | tag | light sage `#E3EAE0` | deep sage `#4F6F52` |
+| Food (`food`) | fork and knife | soft pink `#F6DCE6` | plum `#553047` |
+| Transport (`transport`) | bus | light sage `#E3EAE0` | deep sage `#4F6F52` |
+| Shopping (`shopping`) | shopping bag | warm beige `#EFE3CF` | dark brown `#5C4033` |
+| Bills (`bills`) | receipt | light sage `#E3EAE0` | deep sage `#4F6F52` |
+| Entertainment (`entertainment`) | film ticket | soft pink `#F6DCE6` | plum `#553047` |
+| Other (`other`) | three dots | warm beige `#EFE3CF` | dark brown `#5C4033` |
+| Any category you create (`tag`) | tag | light sage `#E3EAE0` | deep sage `#4F6F52` |
 
 - **Decorative for screen readers:** icons are hidden from screen readers
   and have no text of their own, because the category name is always
@@ -793,6 +884,9 @@ seconds, inside the box where the change was made:
 ---
 
 ## User flow
+0. **Log in.** Open the page. Without a saved session, the log in screen
+   shows. Log in, or switch to **Create an account** and sign up. The
+   dashboard opens with "Hi <username>". (See "Logging in".)
 1. **Open the page.** The cards and list show their loading states, then
    their data (or the empty/error/server states above).
 2. **Add an expense.** Click **+ Add expense**. In the popup, fill in the
@@ -816,8 +910,11 @@ seconds, inside the box where the change was made:
    to see last month's total, and › to come back. Choose a month in the
    Expenses box to list only that month's expenses, or "All months".
 8. **Reload the page** at any time. Everything saved is still there,
-   because the data lives in the backend. The arrows and the month choice
-   start on the current month again.
+   because the data lives in the backend, and you stay logged in until
+   the session ends. The arrows and the month choice start on the
+   current month again.
+9. **Log out.** Click **Log out**. The log in screen shows, and another
+   person can log in with their own account and see only their own data.
 
 After every successful add, edit, delete, limit change, or category
 change, the frontend reloads the list (for the chosen month), the cards,

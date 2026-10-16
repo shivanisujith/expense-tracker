@@ -38,6 +38,7 @@ def test_add_valid_expense_returns_201_with_new_id(client):
         "amount_paise": 1250,
         "category": "Food",
         "category_id": 1,
+        "icon": "food",
         "date": "2026-10-07",
         "note": "Lunch",
     }
@@ -50,8 +51,8 @@ def test_added_expense_survives_app_restart(client, db_path):
     # Read the database with a brand-new connection.
     assert count_expense_rows() == 1
 
-    # Start the app again and list expenses.
-    with TestClient(app) as restarted:
+    # Start the app again (with the same session) and list expenses.
+    with TestClient(app, headers=client.headers) as restarted:
         assert restarted.get("/api/expenses").json() == [created]
 
 
@@ -304,7 +305,7 @@ def test_edit_replaces_all_fields_and_updates_list_and_summary(client):
     response = client.put(f"/api/expenses/{created['id']}", json=new_values)
 
     assert response.status_code == 200
-    expected = {"id": created["id"], **new_values, "category_id": 4}
+    expected = {"id": created["id"], **new_values, "category_id": 4, "icon": "bills"}
     assert response.json() == expected
     assert client.get("/api/expenses").json() == [expected]
     assert food_spent(client) == 0
