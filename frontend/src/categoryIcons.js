@@ -1,7 +1,8 @@
 // Which icon each category gets (specs/frontend-spec.md, "Category icons").
-// The icon follows the category's id, not its name: the six starting
-// categories are ids 1 to 6 and keep their icons when renamed; every
-// category created later gets the default tag.
+// The backend sends each category's icon value, which follows the category,
+// not its name or id: the six starting categories keep theirs when renamed,
+// and every category created later gets the default tag. Ids can't be used,
+// because each account's starting six have different ids.
 
 // Soft circle tints from the palette, each with an icon colour that passes
 // 4.5 : 1 on it. Never red: red only means over limit or error.
@@ -11,18 +12,20 @@ export const CIRCLE_TONES = {
   beige: { circle: '#EFE3CF', icon: '#5C4033' },
 }
 
-const STARTING_ICONS = {
-  1: { icon: 'food', tone: 'pink' },
-  2: { icon: 'transport', tone: 'sage' },
-  3: { icon: 'shopping', tone: 'beige' },
-  4: { icon: 'bills', tone: 'sage' },
-  5: { icon: 'entertainment', tone: 'pink' },
-  6: { icon: 'other', tone: 'beige' },
+const STARTING_TONES = {
+  food: 'pink',
+  transport: 'sage',
+  shopping: 'beige',
+  bills: 'sage',
+  entertainment: 'pink',
+  other: 'beige',
 }
 
 const DEFAULT_ICON = { icon: 'tag', tone: 'sage' }
 
-/** { icon, tone } for a category id; the default for anything else. */
-export function categoryIcon(categoryId) {
-  return (Number.isInteger(categoryId) && STARTING_ICONS[categoryId]) || DEFAULT_ICON
+/** { icon, tone } for an icon value; the default tag for anything else. */
+export function categoryIcon(iconValue) {
+  return typeof iconValue === 'string' && Object.hasOwn(STARTING_TONES, iconValue)
+    ? { icon: iconValue, tone: STARTING_TONES[iconValue] }
+    : DEFAULT_ICON
 }

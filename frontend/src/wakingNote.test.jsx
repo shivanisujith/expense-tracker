@@ -6,7 +6,15 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as api from './api.js'
 import App from './App.jsx'
 
+// Already logged in: a saved token that the fake backend accepts, so the
+// page opens on the dashboard (logging in is tested in login.test.jsx).
 vi.mock('./api.js', () => ({
+  savedToken: vi.fn(() => 'token'),
+  whoAmI: vi.fn(async () => ({ username: 'tester' })),
+  onSessionEnded: vi.fn(() => () => {}),
+  logIn: vi.fn(),
+  signUp: vi.fn(),
+  logOut: vi.fn(),
   listExpenses: vi.fn(),
   getSummary: vi.fn(),
   getMonths: vi.fn(),
@@ -48,10 +56,16 @@ afterEach(() => {
 })
 
 const wait = (ms) => act(() => vi.advanceTimersByTimeAsync(ms))
+// Renders the page and lets the saved token's check finish, so the dashboard
+// (whose first load the note is about) has started at time 0.
+async function openPage() {
+  render(<App />)
+  await wait(0)
+}
 const note = () => screen.getByRole('status', { name: 'Server status' })
 
 test('no note while the first load is quick', async () => {
-  render(<App />)
+  await openPage()
   await wait(4999)
   expect(note().textContent).toBe('')
 
@@ -61,7 +75,7 @@ test('no note while the first load is quick', async () => {
 })
 
 test('the note appears after 5 seconds of waiting, and goes when the data arrives', async () => {
-  render(<App />)
+  await openPage()
   await wait(5000)
   expect(note().textContent).toBe(NOTE)
 
@@ -70,7 +84,7 @@ test('the note appears after 5 seconds of waiting, and goes when the data arrive
 })
 
 test('the note also goes when the first load fails', async () => {
-  render(<App />)
+  await openPage()
   await wait(5000)
   expect(note().textContent).toBe(NOTE)
 
@@ -80,7 +94,7 @@ test('the note also goes when the first load fails', async () => {
 })
 
 test('later reloads never show the note, however slow', async () => {
-  render(<App />)
+  await openPage()
   await act(async () => answer())
 
   fireEvent.change(screen.getByRole('combobox', { name: 'Show expenses from' }), {
@@ -92,7 +106,7 @@ test('later reloads never show the note, however slow', async () => {
 })
 
 test('the status area is always there, so screen readers announce the note', async () => {
-  render(<App />)
+  await openPage()
   expect(note().getAttribute('aria-live')).toBe('polite')
   await act(async () => answer())
 })

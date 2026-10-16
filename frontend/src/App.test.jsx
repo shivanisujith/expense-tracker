@@ -6,7 +6,15 @@ import * as api from './api.js'
 import App from './App.jsx'
 import './dialogStub.js'
 
+// Already logged in: a saved token that the fake backend accepts, so the
+// page opens on the dashboard (logging in is tested in login.test.jsx).
 vi.mock('./api.js', () => ({
+  savedToken: vi.fn(() => 'token'),
+  whoAmI: vi.fn(async () => ({ username: 'tester' })),
+  onSessionEnded: vi.fn(() => () => {}),
+  logIn: vi.fn(),
+  signUp: vi.fn(),
+  logOut: vi.fn(),
   listExpenses: vi.fn(),
   getSummary: vi.fn(),
   getMonths: vi.fn(),

@@ -76,7 +76,7 @@ function CategoryCard({ row, editing, success, onEdit, onClose, onLimitSaved, on
     <li className={row.over_limit ? 'card category-card over-limit' : 'card category-card'}>
       <div className="category-card-top">
         <div className="category-title">
-          <CategoryIconFor categoryId={row.category_id} />
+          <CategoryIconFor iconValue={row.icon} />
           <h3 className="category-name">{row.category}</h3>
         </div>
         {!editing && (
