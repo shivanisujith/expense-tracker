@@ -1,8 +1,12 @@
-"""Upgrading a database from before categories could be managed.
+"""Upgrading older database files, one step at a time.
 
-Old format: `expenses.category` and `category_limits.category` hold one of
-the six fixed names. Current format: both point to a row in `categories` by
-id. See specs/backend-spec.md, "Upgrading an existing database".
+1. From before categories could be managed ("old"): `expenses.category` and
+   `category_limits.category` hold one of the six fixed names. Afterwards
+   both point to a row in `categories` by id. See specs/backend-spec.md,
+   "Upgrading an existing database".
+2. From before accounts ("before_login"): categories have no owner. They
+   are kept, unclaimed, until the first account signs up. See
+   specs/backend-spec.md, "Upgrading to accounts".
 """
 
 import filecmp
@@ -12,7 +16,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from app.validation import STARTING_CATEGORIES
+from app.validation import DEFAULT_ICON, STARTING_CATEGORIES, STARTING_ICONS
 
 logger = logging.getLogger(__name__)
 
@@ -22,26 +26,30 @@ class MigrationError(Exception):
 
 
 def database_state(path: str) -> str:
-    """'empty' (no tables yet), 'old' (needs converting) or 'current'."""
+    """'empty' (no tables yet), 'old' (before categories could be managed),
+    'before_login' (before accounts) or 'current'."""
     conn = sqlite3.connect(path)
     try:
         columns = [row[1] for row in conn.execute("PRAGMA table_info(expenses)")]
+        has_users = conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'users'").fetchone()
     finally:
         conn.close()
     if not columns:
         return "empty"
-    return "old" if "category" in columns else "current"
+    if "category" in columns:
+        return "old"
+    return "current" if has_users else "before_login"
 
 
-def backup_path_for(path: str) -> Path:
+def backup_path_for(path: str, before: str = "categories") -> Path:
     original = Path(path)
     stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    return original.with_name(f"{original.stem}.backup-before-categories-{stamp}.db")
+    return original.with_name(f"{original.stem}.backup-before-{before}-{stamp}.db")
 
 
-def make_backup(path: str) -> Path:
+def make_backup(path: str, before: str = "categories") -> Path:
     """Copies the database file unchanged. Raises if it can't be done."""
-    backup = backup_path_for(path)
+    backup = backup_path_for(path, before)
     if backup.exists():
         raise MigrationError(f"Backup file already exists: {backup}")
     shutil.copyfile(path, backup)
@@ -73,9 +81,17 @@ def _count(conn: sqlite3.Connection, table: str) -> int:
     return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
 
 
-def _last_expense_id(conn: sqlite3.Connection) -> int:
-    row = conn.execute("SELECT seq FROM sqlite_sequence WHERE name = 'expenses'").fetchone()
+def _last_id(conn: sqlite3.Connection, table: str) -> int:
+    """The highest id ever given out in a table, even if since deleted."""
+    row = conn.execute("SELECT seq FROM sqlite_sequence WHERE name = ?", (table,)).fetchone()
     return row[0] if row else 0
+
+
+def _keep_last_id(conn: sqlite3.Connection, table: str, last_id: int) -> None:
+    """After rebuilding a table, makes sure no id up to last_id is reused."""
+    highest = conn.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table}").fetchone()[0]
+    conn.execute("DELETE FROM sqlite_sequence WHERE name = ?", (table,))
+    conn.execute("INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)", (table, max(last_id, highest)))
 
 
 def _convert(conn: sqlite3.Connection, categories_table: str, expenses_and_limits_tables: str) -> None:
@@ -83,7 +99,7 @@ def _convert(conn: sqlite3.Connection, categories_table: str, expenses_and_limit
     limits_before = _count(conn, "category_limits")
     # Ids are never reused, even ids of deleted expenses: remember the
     # highest id ever given out, not just the highest one still present.
-    last_expense_id = _last_expense_id(conn)
+    last_expense_id = _last_id(conn, "expenses")
 
     conn.execute(categories_table)
     conn.executemany(
@@ -117,8 +133,58 @@ def _convert(conn: sqlite3.Connection, categories_table: str, expenses_and_limit
 
     conn.execute("DROP TABLE old_expenses")
     conn.execute("DROP TABLE old_category_limits")
-    conn.execute("DELETE FROM sqlite_sequence WHERE name = 'expenses'")
-    conn.execute(
-        "INSERT INTO sqlite_sequence (name, seq) VALUES ('expenses', ?)",
-        (max(last_expense_id, conn.execute("SELECT COALESCE(MAX(id), 0) FROM expenses").fetchone()[0]),),
-    )
+    _keep_last_id(conn, "expenses", last_expense_id)
+
+
+# Every category kept with its id and name, unclaimed (no user_id), and the
+# icon chosen by id: 1 to 6 were the starting six, anything else is a tag.
+_ICON_BY_ID = " ".join(f"WHEN {number} THEN '{icon}'" for number, icon in enumerate(STARTING_ICONS, 1))
+COPY_CATEGORIES = (
+    "INSERT INTO categories_new (id, user_id, name, icon)"
+    f" SELECT id, NULL, name, CASE id {_ICON_BY_ID} ELSE '{DEFAULT_ICON}' END FROM categories"
+)
+
+
+def upgrade_to_accounts(path: str, users_and_sessions_tables: str, new_categories_table: str) -> None:
+    """`new_categories_table` creates the current categories table under the
+    name categories_new; it replaces the old one."""
+    backup = make_backup(path, before="login")
+    logger.warning("Backed up the database to %s before adding accounts", backup)
+
+    # As above: one all-or-nothing change. Foreign keys are not switched on
+    # in this connection, so the old categories table can be swapped out
+    # while expenses and limits still point to it by name.
+    conn = sqlite3.connect(path, isolation_level=None)
+    try:
+        conn.execute("BEGIN")
+        _add_accounts(conn, users_and_sessions_tables, new_categories_table)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+    logger.warning("Upgraded the database to support accounts")
+
+
+def _add_accounts(conn: sqlite3.Connection, users_and_sessions_tables: str, new_categories_table: str) -> None:
+    tables = ("categories", "expenses", "category_limits")
+    counts_before = [_count(conn, table) for table in tables]
+    last_category_id = _last_id(conn, "categories")
+
+    for statement in (users_and_sessions_tables + new_categories_table).split(";"):
+        if statement.strip():
+            conn.execute(statement)
+    conn.execute(COPY_CATEGORIES)
+    # The way SQLite recommends changing a table: build the new one, drop
+    # the old one, then give the new one the old name.
+    conn.execute("DROP TABLE categories")
+    conn.execute("ALTER TABLE categories_new RENAME TO categories")
+    _keep_last_id(conn, "categories", last_category_id)
+
+    counts_after = [_count(conn, table) for table in tables]
+    if counts_after != counts_before:
+        raise MigrationError(
+            f"Row counts changed while adding accounts: categories, expenses, limits "
+            f"{counts_before} -> {counts_after}"
+        )

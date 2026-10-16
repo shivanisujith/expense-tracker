@@ -6,9 +6,13 @@ from datetime import date
 
 from app import clock
 
-# A brand-new database starts with these, in this order. After that the
-# categories live in the database and can be changed.
+# Each new account starts with these, in this order, with these icons.
+# After that the categories live in the database and can be changed.
 STARTING_CATEGORIES = ("Food", "Transport", "Shopping", "Bills", "Entertainment", "Other")
+STARTING_ICONS = ("food", "transport", "shopping", "bills", "entertainment", "other")
+DEFAULT_ICON = "tag"
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 64
 NOTE_MAX_LENGTH = 100
 CATEGORY_NAME_MAX_LENGTH = 30
 MAX_CATEGORIES = 20
@@ -17,6 +21,7 @@ MAX_PAISE = 10_000_000_000
 
 _DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 _MONTH_PATTERN = re.compile(r"[0-9]{4}-(0[1-9]|1[0-2])")
+_USERNAME_PATTERN = re.compile(r"[A-Za-z0-9_]{3,20}")
 
 
 class ApiError(Exception):
@@ -133,6 +138,42 @@ def validate_category_name(body, categories, own_id: int | None = None) -> str:
                 422, "duplicate_category", f"A category called {other_name} already exists.", "name"
             )
     return name
+
+
+def read_login_details(body) -> tuple[str, str]:
+    """The username with spaces at the ends removed, and the password
+    exactly as typed. Missing or non-text is invalid_request (rules A6, A8)."""
+    if not isinstance(body, dict):
+        raise invalid_request()
+    username, password = body.get("username"), body.get("password")
+    if not isinstance(username, str) or not isinstance(password, str):
+        raise invalid_request()
+    return username.strip(), password
+
+
+def validate_new_username(username: str) -> str:
+    """Rule A1. Returns the username in lowercase, as it is saved."""
+    # Checked before lowercasing, so only a to z, 0 to 9 and _ get through.
+    if not _USERNAME_PATTERN.fullmatch(username):
+        raise ApiError(
+            422,
+            "invalid_username",
+            "Username must be 3 to 20 characters, using only letters, numbers and underscores.",
+            "username",
+        )
+    return username.lower()
+
+
+def validate_new_password(password: str, username: str) -> None:
+    """Rules A3 and A4, in that order."""
+    if len(password) < PASSWORD_MIN_LENGTH:
+        raise ApiError(422, "password_too_short", "Password must be at least 8 characters.", "password")
+    if len(password) > PASSWORD_MAX_LENGTH:
+        raise ApiError(422, "password_too_long", "Password must be 64 characters or fewer.", "password")
+    if password.casefold() == username.casefold():
+        raise ApiError(
+            422, "password_same_as_username", "Password can't be the same as your username.", "password"
+        )
 
 
 def validate_expense(body, category_ids: dict[str, int]) -> dict:

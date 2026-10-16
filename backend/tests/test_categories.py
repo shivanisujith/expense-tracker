@@ -44,11 +44,12 @@ def test_new_category_is_added_at_the_end_with_no_limit(client):
     response = add_category(client, "Pets")
 
     assert response.status_code == 201
-    assert response.json() == {"id": 7, "name": "Pets"}
+    assert response.json() == {"id": 7, "name": "Pets", "icon": "tag"}
     assert names(client) == STARTING + ["Pets"]
     assert summary(client)[-1] == {
         "category_id": 7,
         "category": "Pets",
+        "icon": "tag",
         "spent_paise": 0,
         "limit_paise": None,
         "remaining_paise": None,
@@ -72,7 +73,8 @@ def test_new_category_can_be_used_for_expenses_and_limits(client):
 def test_new_category_survives_a_restart(client):
     add_category(client, "Pets")
 
-    with TestClient(app) as restarted:
+    # Restarting the app keeps the same session.
+    with TestClient(app, headers=client.headers) as restarted:
         assert [row["category"] for row in restarted.get("/api/summary").json()["categories"]] == (
             STARTING + ["Pets"]
         )
@@ -154,7 +156,7 @@ def test_renaming_to_own_name_with_different_capitals_is_allowed(client):
     response = rename(client, "pets", "Pets")
 
     assert response.status_code == 200
-    assert response.json() == {"id": 7, "name": "Pets"}
+    assert response.json() == {"id": 7, "name": "Pets", "icon": "tag"}
     assert names(client)[-1] == "Pets"
 
 
@@ -168,12 +170,14 @@ def test_rename_keeps_expenses_in_every_month_and_the_limit(client):
     response = rename(client, "Food", "  Groceries ")
 
     assert response.status_code == 200
-    assert response.json() == {"id": 1, "name": "Groceries"}
+    # The renamed category keeps its icon too.
+    assert response.json() == {"id": 1, "name": "Groceries", "icon": "food"}
     assert [e["category"] for e in client.get("/api/expenses").json()] == ["Groceries", "Groceries"]
     groceries = summary(client)[0]
     assert groceries == {
         "category_id": 1,
         "category": "Groceries",
+        "icon": "food",
         "spent_paise": 1250,
         "limit_paise": 5000,
         "remaining_paise": 3750,

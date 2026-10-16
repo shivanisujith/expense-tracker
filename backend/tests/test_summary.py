@@ -3,6 +3,7 @@ import pytest
 from conftest import insert_expense_row, make_expense
 
 CATEGORY_ORDER = ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other"]
+STARTING_ICONS = ["food", "transport", "shopping", "bills", "entertainment", "other"]
 
 
 def summary_row(client, category):
@@ -41,12 +42,13 @@ def test_new_database_summary_lists_the_six_starting_categories_in_order(client)
             {
                 "category_id": position + 1,
                 "category": name,
+                "icon": icon,
                 "spent_paise": 0,
                 "limit_paise": None,
                 "remaining_paise": None,
                 "over_limit": False,
             }
-            for position, name in enumerate(CATEGORY_ORDER)
+            for position, (name, icon) in enumerate(zip(CATEGORY_ORDER, STARTING_ICONS))
         ],
     }
 
@@ -162,6 +164,7 @@ def test_limit_shows_in_summary_with_remaining(client):
     assert summary_row(client, "Food") == {
         "category_id": 1,
         "category": "Food",
+        "icon": "food",
         "spent_paise": 1250,
         "limit_paise": 500000,
         "remaining_paise": 498750,
@@ -179,6 +182,7 @@ def test_expense_that_goes_over_limit_is_saved_and_flagged(client):
     assert summary_row(client, "Bills") == {
         "category_id": 4,
         "category": "Bills",
+        "icon": "bills",
         "spent_paise": 50000,
         "limit_paise": 40000,
         "remaining_paise": -10000,

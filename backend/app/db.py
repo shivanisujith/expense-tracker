@@ -13,13 +13,51 @@ from pathlib import Path
 import psycopg
 
 from app import migration
-from app.validation import STARTING_CATEGORIES
+from app.validation import DEFAULT_ICON, STARTING_CATEGORIES, STARTING_ICONS
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "expenses.db"
+# On the experiment/login branch the default is a separate file, so the
+# real expenses.db is never used by mistake (specs/backend-spec.md, "Settings").
+DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "expenses-login.db"
 
 # The current format (see specs/backend-spec.md, "Data stored"). The CHECK
 # rules are a last safety net; validation.py gives the real errors.
-CATEGORIES_TABLE = """
+USERS_AND_SESSIONS_TABLES = """
+CREATE TABLE users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT    NOT NULL UNIQUE CHECK (length(username) BETWEEN 3 AND 20),
+    password_hash TEXT    NOT NULL,
+    created_at    TEXT    NOT NULL
+);
+
+CREATE TABLE sessions (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users (id),
+    token_hash TEXT    NOT NULL UNIQUE,
+    created_at TEXT    NOT NULL,
+    expires_at TEXT    NOT NULL
+);
+"""
+
+
+def categories_table(name: str = "categories") -> str:
+    """user_id is empty only for old data not yet claimed by an account.
+    Names are unique within one account, ignoring capitals."""
+    return f"""
+CREATE TABLE {name} (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users (id),
+    name    TEXT    NOT NULL CHECK (length(name) BETWEEN 1 AND 30),
+    icon    TEXT    NOT NULL DEFAULT '{DEFAULT_ICON}',
+    UNIQUE (user_id, name COLLATE NOCASE)
+);
+"""
+
+
+CATEGORIES_TABLE = categories_table()
+
+# The categories table from before accounts. Very old files are first
+# converted to this, then upgraded to accounts.
+CATEGORIES_TABLE_BEFORE_LOGIN = """
 CREATE TABLE categories (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT    NOT NULL UNIQUE COLLATE NOCASE CHECK (length(name) BETWEEN 1 AND 30)
@@ -43,13 +81,30 @@ CREATE TABLE category_limits (
 """
 
 # The same tables in PostgreSQL. Identity ids are never reused, BIGINT holds
-# whole paise, and the index makes names unique ignoring capitals.
-POSTGRES_TABLES = """
-CREATE TABLE categories (
-    id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name TEXT   NOT NULL CHECK (char_length(name) BETWEEN 1 AND 30)
+# whole paise, and the index makes names unique per account ignoring capitals.
+POSTGRES_TABLES = f"""
+CREATE TABLE users (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username      TEXT   NOT NULL UNIQUE CHECK (char_length(username) BETWEEN 3 AND 20),
+    password_hash TEXT   NOT NULL,
+    created_at    TEXT   NOT NULL
 );
-CREATE UNIQUE INDEX categories_name_ignoring_capitals ON categories (lower(name));
+
+CREATE TABLE sessions (
+    id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users (id),
+    token_hash TEXT   NOT NULL UNIQUE,
+    created_at TEXT   NOT NULL,
+    expires_at TEXT   NOT NULL
+);
+
+CREATE TABLE categories (
+    id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT REFERENCES users (id),
+    name    TEXT   NOT NULL CHECK (char_length(name) BETWEEN 1 AND 30),
+    icon    TEXT   NOT NULL DEFAULT '{DEFAULT_ICON}'
+);
+CREATE UNIQUE INDEX categories_name_ignoring_capitals ON categories (user_id, lower(name));
 
 CREATE TABLE expenses (
     id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -140,11 +195,6 @@ def connect() -> Connection:
     return Connection(raw, is_postgres=False)
 
 
-def starting_categories_sql() -> str:
-    names = ", ".join(f"('{name}')" for name in STARTING_CATEGORIES)
-    return f"INSERT INTO categories (name) VALUES {names};"
-
-
 def init_db() -> None:
     """Brings the database to the current format when the app starts."""
     if get_database_url():
@@ -154,40 +204,45 @@ def init_db() -> None:
     state = migration.database_state(path)
     if state == "empty":
         _create_new_database(path)
-    elif state == "old":
-        migration.upgrade_old_database(path, CATEGORIES_TABLE, EXPENSES_AND_LIMITS_TABLES)
+        return
+    if state == "old":
+        migration.upgrade_old_database(path, CATEGORIES_TABLE_BEFORE_LOGIN, EXPENSES_AND_LIMITS_TABLES)
+        state = "before_login"
+    if state == "before_login":
+        migration.upgrade_to_accounts(path, USERS_AND_SESSIONS_TABLES, categories_table("categories_new"))
 
 
 def _create_new_database(path: str) -> None:
     conn = sqlite3.connect(path)
     try:
-        # One script, one transaction: tables and starting categories together.
+        # One script, one transaction. Categories come with each sign-up.
         conn.executescript(
-            "BEGIN;"
-            + CATEGORIES_TABLE
-            + EXPENSES_AND_LIMITS_TABLES
-            + starting_categories_sql()
-            + "COMMIT;"
+            "BEGIN;" + USERS_AND_SESSIONS_TABLES + CATEGORIES_TABLE + EXPENSES_AND_LIMITS_TABLES + "COMMIT;"
         )
     finally:
         conn.close()
 
 
 def _init_postgres() -> None:
-    """An empty online database gets the tables and the six starting
-    categories in one step. One that has them already is left alone, so
-    restarts and redeploys keep every row."""
+    """An empty online database gets the tables in one step. One that has
+    them already is left alone, so restarts and redeploys keep every row."""
     conn = connect()
     try:
         with conn.transaction():
             exists = conn.execute("SELECT to_regclass('public.categories') IS NOT NULL").fetchone()[0]
             if not exists:
                 conn.execute(POSTGRES_TABLES)
-                conn.execute(starting_categories_sql())
     finally:
         conn.close()
 
 
-def category_ids(conn: Connection) -> dict[str, int]:
-    """Current category names mapped to their ids."""
-    return {row["name"]: row["id"] for row in conn.execute("SELECT id, name FROM categories")}
+def add_starting_categories(conn: Connection, user_id: int) -> None:
+    """A new account's six starting categories, in order, with their icons."""
+    for name, icon in zip(STARTING_CATEGORIES, STARTING_ICONS):
+        conn.execute("INSERT INTO categories (user_id, name, icon) VALUES (?, ?, ?)", (user_id, name, icon))
+
+
+def category_ids(conn: Connection, user_id: int) -> dict[str, int]:
+    """The account's current category names mapped to their ids."""
+    rows = conn.execute("SELECT id, name FROM categories WHERE user_id = ?", (user_id,))
+    return {row["name"]: row["id"] for row in rows}

@@ -1,5 +1,7 @@
 """Criterion 15: an old database is backed up, then converted with every
-expense and limit kept. Every test here uses a temporary file."""
+expense and limit kept. It is then upgraded to accounts too (criterion 33,
+tested in detail in test_login_migration.py). Every test here uses a
+temporary file."""
 
 import sqlite3
 
@@ -8,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app import migration
 from app.main import app
-from conftest import POSTGRES
+from conftest import POSTGRES, bearer, sign_up
 
 # The upgrade only ever applies to an old SQLite file on the laptop.
 pytestmark = pytest.mark.skipif(POSTGRES, reason="only for the local SQLite file")
@@ -97,6 +99,12 @@ def old_db(db_path):
     return db_path
 
 
+def logged_in(client):
+    """The first account to sign up takes the converted data."""
+    client.headers.update(bearer(sign_up(client).json()["token"]))
+    return client
+
+
 def test_old_database_is_backed_up_byte_for_byte(old_db):
     original_bytes = old_db.read_bytes()
 
@@ -122,6 +130,7 @@ def test_every_expense_and_limit_is_kept(old_db):
 
 def test_converted_data_shows_through_the_api(old_db):
     with TestClient(app) as client:
+        logged_in(client)
         listed = client.get("/api/expenses").json()
         summary = client.get("/api/summary").json()["categories"]
 
@@ -131,6 +140,7 @@ def test_converted_data_shows_through_the_api(old_db):
         "amount_paise": 1250,
         "category": "Food",
         "category_id": 1,
+        "icon": "food",
         "date": "2026-10-07",
         "note": "Lunch",
     }
@@ -142,7 +152,7 @@ def test_converted_data_shows_through_the_api(old_db):
 
 def test_deleted_expense_ids_are_still_never_reused(old_db):
     with TestClient(app) as client:
-        new = client.post(
+        new = logged_in(client).post(
             "/api/expenses",
             json={"amount_paise": 100, "category": "Food", "date": "2026-10-07"},
         ).json()
@@ -192,11 +202,29 @@ def test_failed_backup_stops_before_changing_anything(old_db, monkeypatch):
     assert old_rows(old_db) == (expenses_before, limits_before)
 
 
-def test_brand_new_database_gets_the_six_starting_categories_and_no_backup(db_path):
+def test_old_database_is_also_upgraded_to_accounts(old_db):
     with TestClient(app):
         pass
+
+    assert migration.database_state(str(old_db)) == "current"
+    assert len(sorted(old_db.parent.glob(f"{old_db.stem}.backup-before-login-*.db"))) == 1
+    conn = sqlite3.connect(old_db)
+    try:
+        found = conn.execute("SELECT user_id, icon FROM categories ORDER BY id").fetchall()
+    finally:
+        conn.close()
+    icons = ["food", "transport", "shopping", "bills", "entertainment", "other"]
+    assert found == [(None, icon) for icon in icons]
+
+
+def test_brand_new_database_has_no_categories_until_the_first_sign_up_and_no_backup(db_path):
+    with TestClient(app) as client:
+        expenses, limits, categories = converted_rows(db_path)
+        assert (expenses, limits, categories) == ([], [], [])
+
+        sign_up(client)
 
     expenses, limits, categories = converted_rows(db_path)
     assert (expenses, limits) == ([], [])
     assert categories == STARTING
-    assert backups(db_path) == []
+    assert sorted(db_path.parent.glob(f"{db_path.stem}.backup-*.db")) == []

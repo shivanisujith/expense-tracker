@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app import db
 from app.main import allowed_origins, app
-from conftest import POSTGRES, make_expense
+from conftest import POSTGRES, make_expense, query, sign_up
 
 MAX_PAISE = 10_000_000_000
 
@@ -37,14 +37,14 @@ def test_new_ids_come_back_from_inserts(client):
     category = client.post("/api/categories", json={"name": "Pets"}).json()
 
     assert type(first["id"]) is int and second["id"] == first["id"] + 1
-    assert category == {"id": 7, "name": "Pets"}
+    assert category == {"id": 7, "name": "Pets", "icon": "tag"}
 
 
 def test_restarting_keeps_data_and_adds_no_second_set_of_categories(client):
     client.post("/api/categories", json={"name": "Pets"})
     saved = client.post("/api/expenses", json=make_expense(category="Pets")).json()
 
-    with TestClient(app) as restarted:
+    with TestClient(app, headers=client.headers) as restarted:
         names = [row["category"] for row in restarted.get("/api/summary").json()["categories"]]
         assert names == ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Other", "Pets"]
         assert restarted.get("/api/expenses").json() == [saved]
@@ -77,15 +77,37 @@ def test_a_failed_change_saves_nothing(client):
 
 def test_names_are_unique_ignoring_capitals_in_the_database_too(client):
     # The backend checks this first (rule 14); this is the database's own net.
+    # The client's account is user 1, owning Food.
     conn = db.connect()
     try:
         try:
             with conn.transaction():
-                conn.execute("INSERT INTO categories (name) VALUES ('FOOD')")
+                conn.execute("INSERT INTO categories (user_id, name) VALUES (1, 'FOOD')")
         except Exception:
             pass
         else:
             raise AssertionError("the database should refuse FOOD when Food exists")
+    finally:
+        conn.close()
+
+
+def test_another_account_may_have_the_same_name_in_the_database(client):
+    sign_up(client, "second")  # user 2, with its own Food
+    assert query("SELECT COUNT(*) FROM categories WHERE lower(name) = 'food'") == [(2,)]
+
+
+def test_usernames_are_unique_in_the_database_too(client):
+    conn = db.connect()
+    try:
+        try:
+            with conn.transaction():
+                conn.execute(
+                    "INSERT INTO users (username, password_hash, created_at) VALUES ('tester', 'x', 'x')"
+                )
+        except Exception:
+            pass
+        else:
+            raise AssertionError("the database should refuse a second 'tester'")
     finally:
         conn.close()
 
@@ -98,6 +120,26 @@ def test_rows_can_be_read_by_name_or_position(client):
         conn.close()
     assert (row["id"], row["name"]) == (1, "Food")
     assert (row[0], row[1]) == (1, "Food")
+
+
+def test_cors_allows_the_authorization_header(client):
+    response = client.options(
+        "/api/expenses",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization, content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert "authorization" in response.headers["access-control-allow-headers"].lower()
+
+
+def test_the_default_database_file_is_the_experiment_one(monkeypatch):
+    # On the experiment/login branch, forgetting EXPENSES_DB_PATH must never
+    # lead to the real expenses.db.
+    monkeypatch.delenv("EXPENSES_DB_PATH", raising=False)
+    assert db.get_db_path().endswith("/backend/expenses-login.db")
 
 
 def test_allowed_origins_default_to_the_local_page(monkeypatch):
