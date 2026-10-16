@@ -98,6 +98,7 @@ li { margin: 4px 0; }
 }
 .src.rec { background: var(--track); color: var(--accent-hover); }
 .src.inf { background: var(--tint-beige); color: var(--brown); }
+.src.own { background: var(--tint-pink); color: var(--subtitle); }
 .legend { font-size: 0.92rem; color: var(--muted);
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
 .legend p { margin: 4px 0; }
@@ -243,9 +244,11 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <p><span class="src rec">Recorded</span> means the reason is written down in the specs, code comments or commit messages.</p>
     <p><span class="src rec">Recorded: build sessions</span> means it comes from the person who built the app, describing what happened during the build. It can't be seen in the git history.</p>
     <p><span class="src inf">My inference</span> means a reasonable explanation I worked out, but nobody wrote it down.</p>
+    <p><span class="src own">In my own words</span> means Shivani's personal reflection, not taken from the build records.</p>
     <p>Words with a dotted underline, <a class="t" data-t="term" href="#glossary">like these</a>, can be clicked to show a plain-language meaning. They are all listed in the <a href="#glossary">Glossary</a> at the end.</p>
   </div>
   <nav class="toc" aria-label="Sections">
+    <a href="#why">Why an expense tracker</a>
     <a href="#big-picture">The big picture</a>
     <a href="#parts">The four parts</a>
     <a href="#journey-add">Journey 1: adding an expense</a>
@@ -255,6 +258,13 @@ footer { color: var(--muted); font-size: 0.9rem; padding: 10px 0 40px; }
     <a href="#glossary">Glossary</a>
   </nav>
 </header>
+
+<!-- ============================================================ -->
+<section class="box" id="why">
+  <h2>Why an expense tracker <span class="src own">In my own words</span></h2>
+  <p>I didn’t start this course with a product I wanted to build. What I wanted was to learn the whole process properly: writing specs, testing, CI, deploying, and fixing things when they break. So I picked a simple, familiar problem on purpose. With an idea I already understood, I could spend my effort on doing each step carefully instead of working out what the app should be.</p>
+  <p>The app is small, but getting the details right wasn’t. Money had to be stored exactly, dates had to follow Indian time, limits had to behave sensibly at the edges, and the online version had to stay honest about what it can’t do. Building it taught me much more than I expected, and I now understand how each part fits together, from the spec to the live site.</p>
+</section>
 
 <!-- ============================================================ -->
 <section class="box" id="big-picture">
