@@ -203,7 +203,7 @@ limits.
     calculated by the backend, and leaves out any part that doesn't apply.
     -- decided by: automated test, plus a manual browser check.
 
-Criteria 24 to 34 cover login. With login, criteria 1 to
+Criteria 24 to 35 cover login. With login, criteria 1 to
 23 are read as "for the logged-in user, using only their own data".
 
 24. A user can sign up with a valid username and password. The account is
@@ -263,6 +263,13 @@ Criteria 24 to 34 cover login. With login, criteria 1 to
     -- decided by: automated test against a throwaway PostgreSQL, using
     the tables from before accounts, plus a manual check on the public
     site after deploying.
+35. On the log in screen, a button in the Password field shows or hides
+    the password. Its label says what it will do ("Show password" or
+    "Hide password") and it works with the keyboard. Using it never sends
+    the form or changes what was typed, and the password always starts
+    hidden: when the screen opens, after switching between Log in and
+    Create account, and after a failed log in or sign-up.
+    -- decided by: automated test, plus a manual browser check.
 
 ## Known Limitations
 - **Accounts are a demo.** Anyone with the link can create an account.

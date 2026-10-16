@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { logIn, signUp } from '../api.js'
 import { checkLoginForm } from '../loginForm.js'
+import { EyeIcon, EyeOffIcon } from './icons.jsx'
 import ModalField from './ModalField.jsx'
 import ServerBanner from './ServerBanner.jsx'
 
@@ -41,7 +42,11 @@ function LoginScreen({ message, checkFailed, onRetryCheck, onLoggedIn, trackFirs
   const [sending, setSending] = useState(false)
   const [unreachable, setUnreachable] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  // The password always starts hidden, and is hidden again after switching
+  // forms or a failed attempt (specs/frontend-spec.md, "Show and hide the password").
+  const [showPassword, setShowPassword] = useState(false)
   const words = WORDING[mode]
+  const toggleLabel = showPassword ? 'Hide password' : 'Show password'
 
   function update(field) {
     return (event) => setValues({ ...values, [field]: event.target.value })
@@ -60,6 +65,7 @@ function LoginScreen({ message, checkFailed, onRetryCheck, onLoggedIn, trackFirs
     setMode(mode === 'login' ? 'signup' : 'login')
     setFieldErrors({})
     setTopMessage('')
+    setShowPassword(false)
   }
 
   async function send() {
@@ -75,6 +81,7 @@ function LoginScreen({ message, checkFailed, onRetryCheck, onLoggedIn, trackFirs
       onLoggedIn(session.username)
     } catch (error) {
       setSending(false)
+      setShowPassword(false)
       setUnreachable(error.kind === 'unreachable')
       if (error.kind === 'unreachable') {
         setTopMessage(UNREACHABLE_MESSAGE)
@@ -130,15 +137,27 @@ function LoginScreen({ message, checkFailed, onRetryCheck, onLoggedIn, trackFirs
               />
             </ModalField>
             <ModalField label="Password" id="login-password" error={fieldErrors.password}>
-              <input
-                id="login-password"
-                name="password"
-                type="password"
-                autoComplete={words.passwordAutocomplete}
-                value={values.password}
-                onChange={update('password')}
-                {...errorProps('password')}
-              />
+              <div className="password-wrap">
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={words.passwordAutocomplete}
+                  value={values.password}
+                  onChange={update('password')}
+                  {...errorProps('password')}
+                />
+                {/* type="button", so it never sends the form. */}
+                <button
+                  type="button"
+                  className="password-toggle"
+                  aria-label={toggleLabel}
+                  title={toggleLabel}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                </button>
+              </div>
             </ModalField>
           </div>
           <button type="submit" className="login-submit" disabled={sending}>

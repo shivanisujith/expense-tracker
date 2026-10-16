@@ -670,6 +670,44 @@ button.danger-solid:hover:not(:disabled) {
   margin: 0 0 12px;
 }
 
+/* Show/hide password: an icon button inside the Password field, at its
+   right end. The input leaves room so typed text never runs under it. */
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 42px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* :not(:disabled) so this beats the general button hover (dark sage). */
+.password-toggle:hover:not(:disabled) {
+  background: var(--highlight);
+  color: var(--accent);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
 /* The demo warning when creating an account: normal text, never red,
    because it isn't an error. */
 .login-warning {

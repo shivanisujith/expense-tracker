@@ -57,3 +57,31 @@ test('red is used on the log in screen only for errors', () => {
   const loginRules = css.slice(css.indexOf('.login-box {'), css.indexOf('/* Narrower than a laptop'))
   expect(loginRules).not.toMatch(/--danger/)
 })
+
+// The show/hide password button (specs/frontend-spec.md, "Show and hide the
+// password"): the rules it really uses, read from App.css.
+function rule(selector) {
+  const start = css.indexOf(`${selector} {`)
+  if (start === -1) throw new Error(`${selector} is not in App.css`)
+  return css.slice(start, css.indexOf('}', start))
+}
+
+test('the show/hide password icon is muted plum on the field, and passes 3 : 1', () => {
+  expect(rule('.password-toggle')).toMatch(/color:\s*var\(--muted\)/)
+  expect(rule('.password-toggle')).toMatch(/background:\s*transparent/)
+  expect(contrast(colour('muted'), colour('surface'))).toBeGreaterThanOrEqual(3)
+})
+
+test('on hover the icon is sage on light sage, and passes 3 : 1', () => {
+  // As specific as the general button:hover:not(:disabled) rule (dark sage
+  // background), so that rule can't win and hide the sage icon.
+  const hover = rule('.password-toggle:hover:not(:disabled)')
+  expect(hover).toMatch(/color:\s*var\(--accent\)/)
+  expect(hover).toMatch(/background:\s*var\(--highlight\)/)
+  expect(contrast(colour('accent'), colour('highlight'))).toBeGreaterThanOrEqual(3)
+})
+
+test('with the keyboard it shows a sage focus outline that passes 3 : 1 against the field', () => {
+  expect(rule('.password-toggle:focus-visible')).toMatch(/outline:[^;]*var\(--accent\)/)
+  expect(contrast(colour('accent'), colour('surface'))).toBeGreaterThanOrEqual(3)
+})

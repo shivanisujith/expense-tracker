@@ -200,6 +200,139 @@ test('a server error shows at the top and keeps what was typed', async () => {
   expect(passwordField().value).toBe('a good password')
 })
 
+// --- Show and hide the password ---------------------------------------------------
+
+const toggle = () => loginBox().getByRole('button', { name: /^(Show|Hide) password$/ })
+// Which icon the button shows: the eye with a line (hidden) or the open eye.
+const toggleIcon = () => toggle().querySelector('svg').getAttribute('class')
+
+test('the password starts hidden, with a "Show password" button showing the crossed-out eye', () => {
+  render(<App />)
+
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(toggle().getAttribute('aria-label')).toBe('Show password')
+  expect(toggle().getAttribute('title')).toBe('Show password')
+  expect(toggleIcon()).toBe('icon-eye-off')
+  expect(toggle().querySelector('svg').getAttribute('aria-hidden')).toBe('true')
+  // Inside the Password field's box, next to the input.
+  expect(passwordField().closest('.password-wrap').contains(toggle())).toBe(true)
+})
+
+test('clicking it shows the password, and clicking again hides it, keeping what was typed', () => {
+  render(<App />)
+  type(usernameField(), 'alice')
+  type(passwordField(), 'a good password')
+  toggle().focus()
+
+  fireEvent.click(toggle())
+
+  expect(passwordField().getAttribute('type')).toBe('text')
+  expect(toggle().getAttribute('aria-label')).toBe('Hide password')
+  expect(toggle().getAttribute('title')).toBe('Hide password')
+  expect(toggleIcon()).toBe('icon-eye')
+  expect(passwordField().value).toBe('a good password')
+  expect(document.activeElement).toBe(toggle())
+
+  fireEvent.click(toggle())
+
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(toggle().getAttribute('aria-label')).toBe('Show password')
+  expect(toggleIcon()).toBe('icon-eye-off')
+  expect(passwordField().value).toBe('a good password')
+})
+
+test('it never sends the form', () => {
+  render(<App />)
+  type(usernameField(), 'alice')
+  type(passwordField(), 'a good password')
+
+  fireEvent.click(toggle())
+  fireEvent.click(toggle())
+
+  expect(toggle().getAttribute('type')).toBe('button')
+  expect(api.logIn).not.toHaveBeenCalled()
+  expect(api.signUp).not.toHaveBeenCalled()
+  expect(loginBox().getByRole('button', { name: 'Log in' }).disabled).toBe(false)
+})
+
+test('it works with the keyboard: a real button, next in the Tab order after Password', () => {
+  render(<App />)
+
+  // A native <button> is reached with Tab and pressed with Enter or Space.
+  expect(toggle().tagName).toBe('BUTTON')
+  expect(toggle().disabled).toBe(false)
+  expect(toggle().getAttribute('tabindex')).toBeNull()
+  const focusable = [...document.querySelectorAll('.login-box input, .login-box button')]
+  expect(focusable.indexOf(toggle())).toBe(focusable.indexOf(passwordField()) + 1)
+})
+
+test('switching between Log in and Create account hides the password again, keeping it', () => {
+  render(<App />)
+  type(passwordField(), 'a good password')
+  fireEvent.click(toggle())
+
+  switchToSignUp()
+
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(toggle().getAttribute('aria-label')).toBe('Show password')
+  expect(passwordField().value).toBe('a good password')
+
+  fireEvent.click(toggle())
+  fireEvent.click(screen.getByRole('button', { name: 'Already have an account? Log in' }))
+
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(passwordField().value).toBe('a good password')
+})
+
+test('a failed log in hides the password again', async () => {
+  api.logIn.mockRejectedValue(apiError('server', 'Something went wrong on the server. Please try again.'))
+  render(<App />)
+  type(usernameField(), 'alice')
+  type(passwordField(), 'a good password')
+  fireEvent.click(toggle())
+
+  fireEvent.click(loginBox().getByRole('button', { name: 'Log in' }))
+
+  await waitFor(() =>
+    expect(loginBox().getByText('Something went wrong on the server. Please try again.')).toBeTruthy(),
+  )
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(toggle().getAttribute('aria-label')).toBe('Show password')
+  expect(passwordField().value).toBe('a good password')
+})
+
+test('a wrong log in hides the password again', async () => {
+  api.logIn.mockRejectedValue(
+    apiError('unauthorized', 'Username or password is incorrect.', { code: 'wrong_login' }),
+  )
+  render(<App />)
+  type(usernameField(), 'alice')
+  type(passwordField(), 'not the password')
+  fireEvent.click(toggle())
+
+  fireEvent.click(loginBox().getByRole('button', { name: 'Log in' }))
+
+  await waitFor(() => expect(loginBox().getByText('Username or password is incorrect.')).toBeTruthy())
+  expect(passwordField().getAttribute('type')).toBe('password')
+})
+
+test('a failed sign-up hides the password again', async () => {
+  api.signUp.mockRejectedValue(
+    apiError('invalid', 'That username is already taken.', { field: 'username', code: 'username_taken' }),
+  )
+  render(<App />)
+  switchToSignUp()
+  type(usernameField(), 'alice')
+  type(passwordField(), 'a good password')
+  fireEvent.click(toggle())
+
+  fireEvent.click(loginBox().getByRole('button', { name: 'Create account' }))
+
+  await waitFor(() => expect(loginBox().getByText('That username is already taken.')).toBeTruthy())
+  expect(passwordField().getAttribute('type')).toBe('password')
+  expect(passwordField().value).toBe('a good password')
+})
+
 // --- Creating an account --------------------------------------------------------
 
 test('the switch changes to "Create an account", clearing messages but keeping what was typed', () => {

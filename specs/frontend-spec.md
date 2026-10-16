@@ -58,6 +58,8 @@ instead of the dashboard:
     use a password you use anywhere else."
   - **Username** and **Password** fields, each with a visible label above
     it. The password is hidden as it is typed.
+  - A **show/hide password button** inside the Password field, at its
+    right end (see "Show and hide the password" below).
   - One sage button: **Log in**, or **Create account**.
   - A link-style button underneath to switch: "New here? Create an
     account" / "Already have an account? Log in". Switching clears the
@@ -68,6 +70,29 @@ instead of the dashboard:
   "Username or password is incorrect.", or "Your session has expired.
   Please log in again." after being sent back here) shows in red at the
   top of the box.
+
+### Show and hide the password
+- A small eye icon button sits inside the Password field, at its right
+  end. The typed text never runs underneath it.
+- Clicking it switches the password between hidden (dots) and visible
+  text. It never sends the form, never changes or clears what was typed,
+  and the cursor stays on the button.
+- **The icon shows the current state:** an eye with a line through it
+  while the password is hidden, and an open eye while it is visible.
+- **Its label says what it will do,** and switches with the state:
+  "Show password" while hidden, "Hide password" while visible. The label
+  is read by screen readers and shown as a tooltip on hover. The icon
+  itself is hidden from screen readers.
+- **Keyboard:** Tab reaches it straight after the Password field, and
+  Enter or Space switches it (it is a normal button).
+- **The password always starts hidden:** when the log in screen opens,
+  after switching between Log in and Create account (what was typed is
+  kept, but hidden again), and after any failed log in or sign-up.
+- **Colours:** like the pencil and bin buttons. The icon is muted plum
+  `#6A5260` on the lighter cream field (6.7 : 1); on hover it turns deep
+  sage `#4F6F52` on light sage `#EEF3EC` (5.0 : 1). Both pass the 3 : 1
+  rule for icons that carry meaning. With the keyboard, it shows a deep
+  sage focus outline (5.4 : 1 against the field).
 
 ### Frontend checks before sending
 If one fails, its message shows under its field and nothing is sent.
